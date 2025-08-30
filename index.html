@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprite Sheet Suite v3.2 "Phoenix"</title>
+    <title>Sprite Sheet Suite v3.6 "Phoenix"</title>
     <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -32,7 +32,8 @@
             margin: 0;
             padding: 20px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
         }
         .app-container {
             display: grid;
@@ -108,6 +109,12 @@
         #measurement-canvas { position: absolute; top: 0; left: 0; z-index: 10; cursor: default; }
 
         /* --- Side Panel --- */
+        .help-text {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            margin: -10px 0 10px 0;
+            font-style: italic;
+        }
         #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; }
         #frames-list li { display: flex; align-items: center; gap: 8px; background-color: var(--bg-surface); padding: 8px; border-bottom: 1px solid var(--border-color); font-family: var(--font-mono); font-size: 0.9em; cursor: grab; transition: background-color 0.2s; }
         #frames-list li:last-child { border-bottom: none; }
@@ -116,20 +123,94 @@
         #frames-list li .frame-name-input { display: none; width: 100px; }
         #frames-list li .drag-handle { cursor: grab; color: #888; padding-right: 5px; }
 
-        .code-container { position: relative; margin-top: 10px; }
-        .code-container pre { background-color: var(--bg-dark); color: var(--text-main); padding: 15px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; max-height: 200px; font-family: var(--font-mono); font-size: 0.85em; }
-        .copy-button { position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em; background-color: #4a505c; border: none; }
+        /* --- Code Export Professional Look --- */
+        #code-preview-container {
+            display: none;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .code-editors { display: flex; flex-direction: column; gap: 10px; }
+        .code-editor {
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .code-editor-header {
+            background-color: var(--bg-surface);
+            padding: 8px 12px;
+            font-family: var(--font-mono);
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+        .code-editor-header .copy-button {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            transform: translateY(-50%);
+            padding: 3px 8px;
+            font-size: 0.8em;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border-color);
+        }
+        .code-editor-body {
+            display: flex;
+            max-height: 180px;
+        }
+        .line-numbers {
+            padding: 10px 8px;
+            font-family: var(--font-mono);
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            text-align: right;
+            background-color: var(--bg-panel);
+            user-select: none;
+            overflow-y: hidden; /* Hide scrollbar */
+        }
+        .line-numbers span { display: block; }
+        .code-editor pre {
+            margin: 0;
+            padding: 10px;
+            white-space: pre;
+            overflow: auto;
+            flex-grow: 1;
+            font-family: var(--font-mono);
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        .line-numbers { line-height: 1.5; }
+        .code-editor pre::-webkit-scrollbar, .line-numbers::-webkit-scrollbar { display: none; } /* Hide internal scrollbars */
+        .code-editor-body::-webkit-scrollbar { width: 8px; }
+        .code-editor-body::-webkit-scrollbar-track { background: var(--bg-panel); }
+        .code-editor-body::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
+        
+        .live-preview-container {
+            display: flex;
+            flex-direction: column;
+        }
+        #live-preview-iframe {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #fff;
+        }
         
         /* --- Syntax Highlighting --- */
         .token-punctuation { color: #a9b1d6; }
         .token-key { color: #7dcfff; }
         .token-string { color: #9ece6a; }
         .token-number { color: #ff9e64; }
+        .token-tag-punctuation { color: #565f89; }
         .token-tag { color: #f7768e; }
         .token-attr-name { color: #ff9e64; }
         .token-attr-value { color: #9ece6a; }
         .token-selector { color: #bb9af7; }
         .token-property { color: #7aa2f7; }
+        .token-comment { color: #565f89; font-style: italic; }
 
         /* --- Toast Notification --- */
         #toast {
@@ -140,13 +221,47 @@
             font-weight: 500; z-index: 200;
             transition: bottom 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
         }
+
+        /* --- Footer --- */
+        .app-footer {
+            width: 100%;
+            max-width: 1600px;
+            text-align: center;
+            padding: 20px 0;
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        .app-footer p {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        .app-footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: color 0.2s ease;
+        }
+        .app-footer a:hover {
+            color: var(--primary);
+        }
+        .app-footer svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
     </style>
 </head>
 <body>
 
     <div id="welcome-screen">
         <div id="drop-zone">
-            <h2>Sprite Sheet Suite v3.2</h2>
+            <h2>Sprite Sheet Suite v3.6</h2>
             <p>Arrastra y suelta tu imagen aquí</p>
             <p>o</p>
             <label for="image-loader" id="image-loader-label">Selecciona un archivo</label>
@@ -157,7 +272,7 @@
     <div class="app-container" style="visibility: hidden;">
         <div class="main-panel">
             <div class="panel">
-                <h1>Sprite Sheet Suite <span class="version">v3.2 Phoenix</span></h1>
+                <h1>Sprite Sheet Suite <span class="version">v3.6 Phoenix</span></h1>
                 <p id="image-dimensions">Carga una imagen para empezar.</p>
             </div>
             <div class="panel">
@@ -220,6 +335,7 @@
                     <button id="delete-clip-button" title="Eliminar Clip">🗑️</button>
                 </div>
                 <h3>Frames del Clip</h3>
+                <p class="help-text">Selecciona los frames para incluirlos en la animación.</p>
                 <ul id="frames-list"></ul>
             </div>
             <div class="panel">
@@ -243,11 +359,35 @@
                     <summary>Exportar a Código</summary>
                     <div style="padding-top: 10px;">
                         <button id="export-code-button" disabled>Generar HTML/CSS</button>
-                        <div id="code-output-area" style="display: none; margin-top: 15px;">
-                            <h4>HTML</h4>
-                            <div class="code-container"><pre><code id="html-code-output"></code></pre><button class="copy-button">Copiar</button></div>
-                            <h4>CSS</h4>
-                            <div class="code-container"><pre><code id="css-code-output"></code></pre><button class="copy-button">Copiar</button></div>
+                        <!-- ================================================== -->
+                        <!-- === NUEVA ESTRUCTURA PARA EL EDITOR DE CÓDIGO ==== -->
+                        <!-- ================================================== -->
+                        <div id="code-preview-container">
+                            <div class="code-editors">
+                                <div class="code-editor">
+                                    <div class="code-editor-header">
+                                        HTML
+                                        <button class="copy-button" data-target="html-code-output">Copiar</button>
+                                    </div>
+                                    <div class="code-editor-body">
+                                        <div class="line-numbers" id="html-line-numbers"></div>
+                                        <pre><code id="html-code-output"></code></pre>
+                                    </div>
+                                </div>
+                                <div class="code-editor">
+                                    <div class="code-editor-header">
+                                        CSS
+                                        <button class="copy-button" data-target="css-code-output">Copiar</button>
+                                    </div>
+                                    <div class="code-editor-body">
+                                        <div class="line-numbers" id="css-line-numbers"></div>
+                                        <pre><code id="css-code-output"></code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="live-preview-container">
+                                <iframe id="live-preview-iframe" title="Live Preview"></iframe>
+                            </div>
                         </div>
                     </div>
                 </details>
@@ -262,13 +402,32 @@
                                 <option value="godot">Godot</option>
                             </select>
                         </div>
-                        <div class="code-container"><pre><code id="json-output"></code></pre><button class="copy-button">Copiar</button></div>
+                        <div class="code-container">
+                            <pre><code id="json-output"></code></pre>
+                            <button class="copy-button" data-target="json-output">Copiar</button>
+                        </div>
                     </div>
                 </details>
             </div>
         </div>
     </div>
     <div id="toast"></div>
+
+    <footer class="app-footer">
+        <p>
+            <span>Creado por Héctor Daniel Ayarachi Fuentes</span>
+            <a href="https://github.com/HectorDanielAyarachiFuentes" target="_blank" rel="noopener noreferrer" title="GitHub">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" role="img" aria-label="GitHub icon">
+                    <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                </svg>
+            </a>
+            <a href="https://codepen.io/HectorDanielAyarachiFuentes" target="_blank" rel="noopener noreferrer" title="CodePen">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 138 26" role="img" aria-label="CodePen icon">
+                    <path d="M15.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM46.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM77.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM108.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM24.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM55.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM86.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM117.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM35.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM66.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM97.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM128.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM138 13.1c0 7.2-5.9 13.1-13.1 13.1-7.2 0-13.1-5.9-13.1-13.1 0-7.2 5.9-13.1 13.1-13.1 7.2 0 13.1 5.9 13.1 13.1zM124.9 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM108.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM97.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM86.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM77.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM66.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM55.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3-3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM46.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM35.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM24.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM15.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM13.1 0c7.2 0 13.1 5.9 13.1 13.1 0 7.2-5.9 13.1-13.1 13.1C5.9 26.2 0 20.3 0 13.1 0 5.9 5.9 0 13.1 0zM13.1 3.3C11.3 3.3 9.8 4.8 9.8 6.5s1.5 3.3 3.3 3.3 3.3-1.5 3.3-3.3S14.9 3.3 13.1 3.3z"></path>
+                </svg>
+            </a>
+        </p>
+    </footer>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -301,9 +460,12 @@
         const lastFrameButton = document.getElementById('last-frame-button');
         const fpsSlider = document.getElementById('fps-slider'), fpsValue = document.getElementById('fps-value');
         const exportCodeButton = document.getElementById('export-code-button');
-        const codeOutputArea = document.getElementById('code-output-area');
+        const codePreviewContainer = document.getElementById('code-preview-container');
         const htmlCodeOutput = document.getElementById('html-code-output');
         const cssCodeOutput = document.getElementById('css-code-output');
+        const htmlLineNumbers = document.getElementById('html-line-numbers');
+        const cssLineNumbers = document.getElementById('css-line-numbers');
+        const livePreviewIframe = document.getElementById('live-preview-iframe');
         const allControls = document.querySelectorAll('button, input, select');
         const toast = document.getElementById('toast');
         const undoButton = document.getElementById('undo-button');
@@ -321,9 +483,6 @@
         const SNAP_VALUE = 10;
         let historyStack = [], historyIndex = -1;
 
-        // ==================================================
-        // === BLOQUE DE CÓDIGO MOVIDO PARA CORREGIR EL ERROR ===
-        // ==================================================
         // --- History (Undo/Redo) ---
         const saveState = () => {
             historyStack = historyStack.slice(0, historyIndex + 1);
@@ -355,7 +514,7 @@
             const state = JSON.parse(stateString);
             lines = state.lines;
             frames = state.frames;
-            updateAll(false); // Pass false to prevent saving state again
+            updateAll(false);
             updateHistoryButtons();
         };
 
@@ -367,9 +526,9 @@
                 }
             });
             if (!enabled) {
-                codeOutputArea.style.display = 'none';
+                codePreviewContainer.style.display = 'none';
             }
-            updateHistoryButtons(); // Ahora esta llamada es segura
+            updateHistoryButtons();
         };
         setControlsEnabled(false);
 
@@ -429,7 +588,7 @@
             drawAll();
             updateUI();
             resetAnimation();
-            codeOutputArea.style.display = 'none';
+            codePreviewContainer.style.display = 'none';
         };
 
         const calculateFrames = () => {
@@ -500,9 +659,10 @@
         // --- Clip Management ---
         const getActiveClip = () => clips.find(c => c.id === activeClipId);
 
-        const createNewClip = (name, frameIds = []) => {
+        const createNewClip = (name, initialFrameIds = null) => {
             const newName = name || prompt("Nombre del nuevo clip:", `Clip ${clips.length + 1}`);
             if (!newName) return;
+            const frameIds = initialFrameIds !== null ? initialFrameIds : frames.map(f => f.id);
             const newClip = { id: Date.now(), name: newName, frameIds };
             clips.push(newClip);
             activeClipId = newClip.id;
@@ -652,7 +812,9 @@
         };
 
         const highlightSyntax = (str, lang) => {
-            str = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const escapeHtml = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            str = escapeHtml(str);
+
             if (lang === 'json') {
                 return str
                     .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
@@ -664,13 +826,17 @@
                     .replace(/[{}[\](),:]/g, '<span class="token-punctuation">$&</span>');
             }
             if (lang === 'html') {
-                 return str.replace(/(&lt;[a-zA-Z0-9\/?]+|&gt;)/g, '<span class="token-tag">$&</span>')
-                    .replace(/([a-zA-Z-]+)=/g, '<span class="token-attr-name">$&</span>')
-                    .replace(/"(.*?)"/g, '"<span class="token-attr-value">$1</span>"');
+                return str
+                    .replace(/(&lt;\/?)([^&gt;]+)(&gt;)/g, 
+                        `$1<span class="token-tag">$2</span>$3`)
+                    .replace(/([a-z-]+)=(&quot;.*?&quot;)/g, 
+                        `<span class="token-attr-name">$1</span>=<span class="token-attr-value">$2</span>`);
             }
             if (lang === 'css') {
-                return str.replace(/([a-zA-Z-]+)(?=:)/g, '<span class="token-property">$&</span>')
-                   .replace(/(body|@keyframes|\.sprite-container)/g, '<span class="token-selector">$&</span>');
+                return str
+                    .replace(/\/\*[\s\S]*?\*\//g, '<span class="token-comment">$&</span>')
+                    .replace(/([a-zA-Z-]+)(?=:)/g, '<span class="token-property">$&</span>')
+                    .replace(/(body|@keyframes|\.sprite-container)/g, '<span class="token-selector">$&</span>');
             }
             return str;
         };
@@ -680,7 +846,7 @@
             let outputObject;
             const framesData = frames.map(f => ({ name: f.name, id: f.id, rect: f.rect }));
             const meta = {
-                app: "Sprite Sheet Suite v3.2", image: currentFileName,
+                app: "Sprite Sheet Suite v3.5", image: currentFileName,
                 size: { w: canvas.width, h: canvas.height },
                 clips: clips.map(c => ({ name: c.name, frames: c.frameIds }))
             };
@@ -731,36 +897,109 @@
         
         document.body.addEventListener('click', (e) => {
             if (e.target.classList.contains('copy-button')) {
-                const pre = e.target.previousElementSibling;
+                const targetId = e.target.dataset.target;
+                const pre = document.getElementById(targetId);
                 navigator.clipboard.writeText(pre.textContent).then(() => showToast('¡Copiado al portapapeles!'));
             }
         });
 
         exportCodeButton.addEventListener('click', () => {
             const animFrames = getAnimationFrames();
-            if (animFrames.length === 0) return;
+            if (animFrames.length === 0) {
+                showToast("Selecciona al menos un frame en el clip.", 'warning');
+                return;
+            }
+            
             const { htmlCode, cssCode } = generateCssAnimationCode(animFrames);
+            
+            // Populate code blocks
             htmlCodeOutput.innerHTML = highlightSyntax(htmlCode, 'html');
             cssCodeOutput.innerHTML = highlightSyntax(cssCode, 'css');
-            codeOutputArea.style.display = 'block';
+            
+            // Generate line numbers
+            const generateLines = (count) => Array.from({length: count}, (_, i) => `<span>${i + 1}</span>`).join('');
+            htmlLineNumbers.innerHTML = generateLines(htmlCode.split('\n').length);
+            cssLineNumbers.innerHTML = generateLines(cssCode.split('\n').length);
+
+            // Sync scrolling
+            const syncScroll = (el1, el2) => {
+                el1.addEventListener('scroll', () => el2.scrollTop = el1.scrollTop);
+            };
+            syncScroll(htmlCodeOutput.parentElement, htmlLineNumbers);
+            syncScroll(cssCodeOutput.parentElement, cssLineNumbers);
+
+            // Populate live preview iframe
+            const iframeContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { margin: 0; display: grid; place-content: center; height: 100vh; background-color: #fff; }
+                        ${cssCode}
+                    </style>
+                </head>
+                <body>
+                    ${htmlCode.match(/<body>([\s\S]*)<\/body>/)[1]}
+                </body>
+                </html>
+            `;
+            livePreviewIframe.srcdoc = iframeContent;
+
+            codePreviewContainer.style.display = 'grid';
         });
         
         function generateCssAnimationCode(animFrames) {
-            const firstFrame = animFrames[0].rect; const frameCount = animFrames.length;
-            const htmlCode = `<!DOCTYPE html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8">\n    <title>Animación de Sprite</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <div class="sprite-container"></div>\n</body>\n</html>`;
+            const firstFrame = animFrames[0].rect;
+            const frameCount = animFrames.length;
+            const duration = ((1 / animationState.fps) * frameCount).toFixed(2);
+
+            const htmlCode = `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Animación de Sprite</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="sprite-container"></div>
+</body>
+</html>`;
+
             let keyframesSteps = animFrames.map((frame, index) => {
                 const { x, y } = frame.rect;
-                const stepPercentage = Math.round((index / frameCount) * 100);
-                return `    ${stepPercentage}% { background-position: -${x}px -${y}px; }`;
+                const percentage = (index / frameCount) * 100;
+                return `    ${percentage.toFixed(2)}% { background-position: -${x}px -${y}px; }`;
             }).join('\n');
-            const cssCode = `.sprite-container {\n    width: ${firstFrame.w}px; height: ${firstFrame.h}px;\n    background-image: url('${currentFileName}');\n    animation: run-cycle ${((1 / animationState.fps) * frameCount).toFixed(2)}s steps(${frameCount - 1}, end) infinite;\n}\n@keyframes run-cycle {\n${keyframesSteps}\n    100% { background-position: -${animFrames[frameCount-1].rect.x}px -${animFrames[frameCount-1].rect.y}px; }\n}`;
+            
+            const lastFrame = animFrames[frameCount - 1].rect;
+            keyframesSteps += `\n    100% { background-position: -${lastFrame.x}px -${lastFrame.y}px; }`;
+
+            const cssCode = `/* Contenedor principal del sprite */
+.sprite-container {
+    width: ${firstFrame.w}px;
+    height: ${firstFrame.h}px;
+    background-image: url('${currentFileName}');
+
+    /* --- Animación ---
+     * nombre: run-cycle
+     * duración: ${duration}s
+     * función de tiempo: steps(1, end) -> avanza en saltos discretos
+     * repetición: infinite -> se repite indefinidamente
+    */
+    animation: run-cycle ${duration}s steps(1, end) infinite;
+}
+
+/* Definición de los pasos de la animación */
+@keyframes run-cycle {
+${keyframesSteps}
+}`;
             return { htmlCode, cssCode };
         }
         exportGifButton.addEventListener('click', () => {
             const animFrames = getAnimationFrames();
             if (animFrames.length === 0) return showToast("No hay frames en este clip para exportar.", 'warning');
             showToast("Generando GIF, por favor espera...", 'primary');
-            const gif = new GIF({ workers: 2, quality: 10, workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js' });
+            const gif = new GIF({ workers: 2, quality: 10, workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js' });
             const tempCanvas = document.createElement('canvas'), tempCtx = tempCanvas.getContext('2d');
             const maxSize = parseInt(maxGifSizeInput.value) || 128;
             animFrames.forEach(frame => {
