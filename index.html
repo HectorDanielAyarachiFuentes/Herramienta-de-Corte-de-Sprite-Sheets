@@ -3,687 +3,785 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suite de Herramientas para Sprite Sheets (Versión Mejorada)</title>
-    <!-- Librería JSZip para crear archivos .zip -->
+    <title>Sprite Sheet Suite v3.1 "Phoenix"</title>
+    <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <!-- Librería SortableJS para reordenar listas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-    <!-- Librería gif.js para crear GIFs animados -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <style>
+        :root {
+            --bg-dark: #1a1b26;
+            --bg-surface: #24283b;
+            --bg-panel: #1f2335;
+            --text-main: #c0caf5;
+            --text-secondary: #a9b1d6;
+            --border-color: #414868;
+            --primary: #7aa2f7;
+            --primary-hover: #9eceff;
+            --success: #9ece6a;
+            --warning: #e0af68;
+            --danger: #f7768e;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --font-mono: "SF Mono", "Consolas", "Courier New", monospace;
+        }
+        * { box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex; justify-content: center; align-items: flex-start;
-            padding: 20px; background-color: #f0f2f5; gap: 20px; flex-wrap: wrap;
+            font-family: var(--font-sans);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
         }
-        .main-container, .results-container {
-            display: flex; flex-direction: column; gap: 20px;
+        .app-container {
+            display: grid;
+            grid-template-columns: 1fr 450px;
+            gap: 20px;
+            width: 100%;
+            max-width: 1600px;
         }
-        .main-container { max-width: 800px; }
-        .results-container { min-width: 420px; max-width: 420px; }
-
-        .controls, .results, .generator, .preview, .code-export {
-            background-color: white; padding: 20px; border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        .main-panel, .side-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
-        h1, h2, h3 { margin-top: 0; color: #1c1e21; }
+        .panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        h1, h2, h3 { margin: 0 0 15px 0; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        h1 { font-size: 1.8em; border: none; }
+        h1 .version { font-size: 0.5em; color: var(--primary); }
         
+        /* --- Welcome Screen & Drag-Drop --- */
+        #welcome-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(26, 27, 38, 0.95);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; transition: opacity 0.3s ease;
+        }
+        #drop-zone {
+            width: 80%; max-width: 600px; height: 300px;
+            border: 3px dashed var(--border-color);
+            border-radius: 15px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; color: var(--text-secondary);
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        #drop-zone.dragover { background-color: var(--bg-surface); border-color: var(--primary); }
+        #drop-zone h2 { border: none; }
+        #drop-zone p { margin: 5px 0; }
+        #image-loader-label {
+            background-color: var(--primary); color: var(--bg-dark);
+            padding: 10px 20px; border-radius: 6px; cursor: pointer;
+            margin-top: 15px; transition: background-color 0.2s;
+        }
+        #image-loader-label:hover { background-color: var(--primary-hover); }
+        #image-loader { display: none; }
+
+        /* --- Controles Generales --- */
         button {
-            background-color: #0866ff; color: white; border: none; padding: 10px 15px;
-            border-radius: 6px; cursor: pointer; font-size: 1em; transition: background-color 0.2s;
-            margin-right: 10px; margin-top: 5px;
+            background-color: var(--bg-surface); color: var(--text-main); border: 1px solid var(--primary);
+            padding: 8px 15px; border-radius: 6px; cursor: pointer;
+            font-size: 0.9em; transition: all 0.2s; margin-right: 5px;
         }
-        button:hover { background-color: #0655d4; }
-        button:disabled { background-color: #bcc0c4; cursor: not-allowed; }
-        button.secondary { background-color: #e4e6eb; color: #4b4f56; }
-        button.secondary:hover { background-color: #d8dbdf; }
-        button.success { background-color: #31a24c; }
-        button.success:hover { background-color: #2b8a41; }
-        button.warning { background-color: #f7b928; color: #1c1e21; }
-        button.warning:hover { background-color: #e2a823; }
+        button:hover { background-color: var(--primary); color: var(--bg-dark); }
+        button:disabled { background-color: var(--bg-surface); color: #6b7280; border-color: var(--border-color); cursor: not-allowed; }
+        button.icon-btn { padding: 8px 10px; }
+        .input-group { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        input[type="number"], select {
+            width: 70px; padding: 5px; background-color: var(--bg-dark);
+            border: 1px solid var(--border-color); color: var(--text-main); border-radius: 4px;
+        }
+        select { width: auto; }
 
-        /* --- Generador de Parrilla --- */
-        .generator fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
-        .generator legend { font-weight: 600; padding: 0 5px; }
-        .generator .input-group { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-        .generator input[type="number"] { width: 60px; padding: 5px; }
-        .generator .checkbox-group { display: flex; align-items: center; gap: 5px; font-size: 0.9em; }
-
-        /* --- Previsualización de Animación --- */
-        .preview-area { text-align: center; }
-        #preview-canvas { background-color: #e9ebee; border: 1px solid #ccc; margin-bottom: 10px; image-rendering: pixelated; image-rendering: crisp-edges; }
-        .preview-controls { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
-        
-        .editor-area { display: grid; grid-template-columns: 30px auto; grid-template-rows: 30px auto; width: fit-content; max-width: 100%; overflow: auto; }
-        .ruler-corner { background-color: #f0f2f5; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; }
-        #ruler-top { background-color: #f0f2f5; border-bottom: 1px solid #ccc; }
-        #ruler-left { background-color: #f0f2f5; border-right: 1px solid #ccc; }
+        /* --- Editor Area --- */
+        .editor-area { display: grid; grid-template-columns: 30px auto; grid-template-rows: 30px auto; width: fit-content; max-width: 100%; overflow: auto; background-color: var(--bg-dark); }
+        .ruler-corner { background-color: var(--bg-panel); border-bottom: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
+        #ruler-top, #ruler-left { background-color: var(--bg-panel); }
         #image-container { grid-area: 2 / 2 / 3 / 3; position: relative; }
         #image-display { display: block; }
         #measurement-canvas { position: absolute; top: 0; left: 0; z-index: 10; cursor: default; }
-        
-        #image-dimensions { background-color: #e4e6eb; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.95em; text-align: center; }
-        .code-container { position: relative; margin-top: 10px; }
-        .code-container pre, #json-output { background-color: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; max-height: 200px; font-family: "Courier New", Courier, monospace; font-size: 0.85em; }
-        .copy-button { position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em; background-color: #4a505c; }
-        
-        /* --- Lista de Frames Mejorada --- */
-        #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; }
-        #frames-list li { display: flex; align-items: center; gap: 8px; background-color: #f0f2f5; padding: 8px; border-bottom: 1px solid #ddd; font-family: "Courier New", Courier, monospace; font-size: 0.9em; cursor: grab; transition: background-color 0.2s; }
+
+        /* --- Side Panel --- */
+        #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; }
+        #frames-list li { display: flex; align-items: center; gap: 8px; background-color: var(--bg-surface); padding: 8px; border-bottom: 1px solid var(--border-color); font-family: var(--font-mono); font-size: 0.9em; cursor: grab; transition: background-color 0.2s; }
         #frames-list li:last-child { border-bottom: none; }
-        #frames-list li:hover, #frames-list li.highlight { background-color: #d8e7ff; }
+        #frames-list li:hover, #frames-list li.highlight { background-color: #3b4261; }
         #frames-list li .frame-info { flex-grow: 1; }
         #frames-list li .frame-name-input { display: none; width: 100px; }
         #frames-list li .drag-handle { cursor: grab; color: #888; padding-right: 5px; }
+
+        .code-container { position: relative; margin-top: 10px; }
+        .code-container pre { background-color: var(--bg-dark); color: var(--text-main); padding: 15px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; max-height: 200px; font-family: var(--font-mono); font-size: 0.85em; }
+        .copy-button { position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em; background-color: #4a505c; border: none; }
+        
+        /* --- Syntax Highlighting --- */
+        .token-punctuation { color: #a9b1d6; }
+        .token-key { color: #7dcfff; }
+        .token-string { color: #9ece6a; }
+        .token-number { color: #ff9e64; }
+        .token-tag { color: #f7768e; }
+        .token-attr-name { color: #ff9e64; }
+        .token-attr-value { color: #9ece6a; }
+        .token-selector { color: #bb9af7; }
+        .token-property { color: #7aa2f7; }
+
+        /* --- Toast Notification --- */
+        #toast {
+            position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+            background-color: var(--success); color: var(--bg-dark);
+            padding: 12px 25px; border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            font-weight: 500; z-index: 200;
+            transition: bottom 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        <h1>Suite de Herramientas para Sprite Sheets (v2)</h1>
-        
-        <div class="controls">
-            <h2>1. Carga tu Sprite Sheet</h2>
+    <div id="welcome-screen">
+        <div id="drop-zone">
+            <h2>Sprite Sheet Suite v3.1</h2>
+            <p>Arrastra y suelta tu imagen aquí</p>
+            <p>o</p>
+            <label for="image-loader" id="image-loader-label">Selecciona un archivo</label>
             <input type="file" id="image-loader" accept="image/*">
         </div>
+    </div>
 
-        <div class="generator">
-            <h2>2. Define la Parrilla</h2>
-            <fieldset>
-                <legend>Generación Automática</legend>
+    <div class="app-container" style="visibility: hidden;">
+        <div class="main-panel">
+            <div class="panel">
+                <h1>Sprite Sheet Suite <span class="version">v3.1 Phoenix</span></h1>
+                <p id="image-dimensions">Carga una imagen para empezar.</p>
+            </div>
+            <div class="panel">
+                <h2>Parrilla y Edición</h2>
                 <div class="input-group">
-                    <label>Filas:</label><input type="number" id="rows-input" value="2" min="1">
-                    <label>Columnas:</label><input type="number" id="cols-input" value="5" min="1">
+                    <button id="undo-button" class="icon-btn" disabled title="Deshacer (Ctrl+Z)">↩️</button>
+                    <button id="redo-button" class="icon-btn" disabled title="Rehacer (Ctrl+Y)">↪️</button>
                 </div>
-                <button id="generate-grid-button" disabled>Generar por Filas/Columnas</button>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-                <div class="input-group">
-                    <label>Ancho Celda:</label><input type="number" id="cell-w-input" value="64" min="1">
-                    <label>Alto Celda:</label><input type="number" id="cell-h-input" value="64" min="1">
+                <details open>
+                    <summary>Generación Automática</summary>
+                    <div class="input-group" style="padding-top: 10px;">
+                        <label>Filas:</label><input type="number" id="rows-input" value="2" min="1">
+                        <label>Columnas:</label><input type="number" id="cols-input" value="5" min="1">
+                        <button id="generate-grid-button" disabled>Generar</button>
+                    </div>
+                    <div class="input-group">
+                        <label>Ancho:</label><input type="number" id="cell-w-input" value="64" min="1">
+                        <label>Alto:</label><input type="number" id="cell-h-input" value="64" min="1">
+                        <button id="generate-by-size-button" disabled>Generar</button>
+                    </div>
+                </details>
+                <details>
+                    <summary>Ajuste Manual</summary>
+                    <div class="input-group" style="padding-top: 10px;">
+                        <button id="add-h-line" disabled>+ Línea Horizontal</button>
+                        <button id="add-v-line" disabled>+ Línea Vertical</button>
+                        <button id="clear-button" disabled>Limpiar Todo</button>
+                        <input type="checkbox" id="snap-checkbox"><label for="snap-checkbox">Ajustar</label>
+                    </div>
+                </details>
+            </div>
+            <div class="panel editor-area">
+                <div class="ruler-corner"></div> <canvas id="ruler-top"></canvas> <canvas id="ruler-left"></canvas>
+                <div id="image-container">
+                    <img id="image-display" src="" alt="Sprite sheet">
+                    <canvas id="measurement-canvas"></canvas>
                 </div>
-                <button id="generate-by-size-button" disabled>Generar por Tamaño de Celda</button>
-            </fieldset>
-            <fieldset>
-                <legend>Ajuste Manual</legend>
-                <p>Añade, arrastra o haz doble clic en una línea para eliminarla.</p>
-                <button id="add-h-line" disabled>Añadir Línea Horizontal</button>
-                <button id="add-v-line" disabled>Añadir Línea Vertical</button>
-                <button id="clear-button" class="secondary" disabled>Limpiar Todo</button>
-                <div class="checkbox-group">
-                    <input type="checkbox" id="snap-checkbox"><label for="snap-checkbox">Ajustar a la parrilla (10px)</label>
-                </div>
-            </fieldset>
-        </div>
-        
-        <div class="editor-area">
-            <div class="ruler-corner"></div> <canvas id="ruler-top"></canvas> <canvas id="ruler-left"></canvas>
-            <div id="image-container">
-                <img id="image-display" src="" alt="Tu sprite sheet aparecerá aquí">
-                <canvas id="measurement-canvas"></canvas>
             </div>
         </div>
-    </div>
-    
-    <div class="results-container">
-        <div class="results">
-            <h2>3. Resultados y Exportación</h2>
-            <p id="image-dimensions">Carga una imagen para empezar.</p>
-            <button id="export-zip-button" disabled>Descargar Frames (ZIP)</button>
-            <button id="export-gif-button" class="warning" disabled>Descargar GIF Animado</button>
-        </div>
-
-        <div class="preview">
-            <h3>Previsualización de Animación</h3>
-            <div class="preview-area">
-                <canvas id="preview-canvas" width="150" height="150"></canvas>
-                <div class="preview-controls">
-                    <button id="first-frame-button" disabled>⏮️</button>
-                    <button id="play-pause-button" disabled>▶️ Play</button>
-                    <button id="last-frame-button" disabled>⏭️</button>
+        <div class="side-panel">
+            <div class="panel">
+                <h3>Previsualización</h3>
+                <canvas id="preview-canvas" width="150" height="150" style="background-color: var(--bg-dark); border: 1px solid var(--border-color); margin: 0 auto 10px; display: block; image-rendering: pixelated;"></canvas>
+                <div class="input-group" style="justify-content: center;">
+                    <button id="first-frame-button" class="icon-btn" disabled>⏮️</button>
+                    <button id="play-pause-button" class="icon-btn" disabled>▶️</button>
+                    <button id="last-frame-button" class="icon-btn" disabled>⏭️</button>
                 </div>
-                 <div class="preview-controls" style="margin-top: 10px;">
+                <div class="input-group" style="justify-content: center;">
                     <label for="fps-slider">FPS: <span id="fps-value">12</span></label>
                     <input type="range" id="fps-slider" min="1" max="60" value="12" style="width: 150px;" disabled>
                 </div>
             </div>
-        </div>
-        
-        <div class="code-export">
-            <h3>Exportar Animación a Código</h3>
-            <p>Genera un archivo HTML y CSS funcional para tu animación.</p>
-            <button id="export-code-button" class="success" disabled>Generar HTML/CSS</button>
-            <div id="code-output-area" style="display: none; margin-top: 15px;">
-                <h4>Código HTML</h4>
-                <div class="code-container">
-                    <pre><code id="html-code-output"></code></pre>
-                    <button class="copy-button" id="copy-html-button">Copiar</button>
+            <div class="panel">
+                <h3>Clips de Animación</h3>
+                <div class="input-group">
+                    <select id="clips-select"></select>
+                    <button id="new-clip-button" title="Nuevo Clip">+</button>
+                    <button id="rename-clip-button" title="Renombrar Clip">✏️</button>
+                    <button id="delete-clip-button" title="Eliminar Clip">🗑️</button>
                 </div>
-                <h4>Código CSS</h4>
-                <div class="code-container">
-                    <pre><code id="css-code-output"></code></pre>
-                    <button class="copy-button" id="copy-css-button">Copiar</button>
-                </div>
+                <h3>Frames del Clip</h3>
+                <ul id="frames-list"></ul>
             </div>
-        </div>
-
-        <div class="results">
-            <h3>Datos de Frames (JSON)</h3>
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <label for="json-format-select">Formato:</label>
-                <select id="json-format-select" style="padding: 5px;">
-                    <option value="default">Por Defecto</option>
-                    <option value="phaser3">Phaser 3 (JSON Hash)</option>
-                    <option value="godot">Godot (SpriteFrames)</option>
-                </select>
+            <div class="panel">
+                <h3>Exportar</h3>
+                <details>
+                    <summary>Exportar Frames Individuales</summary>
+                    <div style="padding-top: 10px;">
+                        <button id="export-zip-button" disabled>Descargar Frames (ZIP)</button>
+                    </div>
+                </details>
+                <details>
+                    <summary>Exportar Clip a GIF</summary>
+                    <div style="padding-top: 10px;">
+                        <div class="input-group">
+                            <label>Tamaño Máx:</label><input type="number" id="max-gif-size" value="128" min="16">
+                        </div>
+                        <button id="export-gif-button" disabled>Descargar GIF</button>
+                    </div>
+                </details>
+                <details>
+                    <summary>Exportar a Código</summary>
+                    <div style="padding-top: 10px;">
+                        <button id="export-code-button" disabled>Generar HTML/CSS</button>
+                        <div id="code-output-area" style="display: none; margin-top: 15px;">
+                            <h4>HTML</h4>
+                            <div class="code-container"><pre><code id="html-code-output"></code></pre><button class="copy-button">Copiar</button></div>
+                            <h4>CSS</h4>
+                            <div class="code-container"><pre><code id="css-code-output"></code></pre><button class="copy-button">Copiar</button></div>
+                        </div>
+                    </div>
+                </details>
+                <details>
+                    <summary>Exportar Datos a JSON</summary>
+                    <div style="padding-top: 10px;">
+                        <div class="input-group">
+                            <label>Formato:</label>
+                            <select id="json-format-select">
+                                <option value="default">Por Defecto</option>
+                                <option value="phaser3">Phaser 3</option>
+                                <option value="godot">Godot</option>
+                            </select>
+                        </div>
+                        <div class="code-container"><pre><code id="json-output"></code></pre><button class="copy-button">Copiar</button></div>
+                    </div>
+                </details>
             </div>
-            <div class="code-container">
-                <pre><code id="json-output"></code></pre>
-                <button id="copy-json-button" class="copy-button">Copiar</button>
-            </div>
-            <h3>Lista de Frames</h3>
-            <p style="font-size: 0.8em; margin-top: 0;">Arrastra para reordenar. Doble clic para renombrar.</p>
-            <ul id="frames-list"></ul>
         </div>
     </div>
+    <div id="toast"></div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM Elements ---
-            const imageLoader = document.getElementById('image-loader');
-            const imageDisplay = document.getElementById('image-display');
-            const canvas = document.getElementById('measurement-canvas'), ctx = canvas.getContext('2d');
-            const rulerTop = document.getElementById('ruler-top'), ctxTop = rulerTop.getContext('2d');
-            const rulerLeft = document.getElementById('ruler-left'), ctxLeft = rulerLeft.getContext('2d');
-            const imageDimensionsP = document.getElementById('image-dimensions');
-            const jsonOutput = document.getElementById('json-output');
-            const jsonFormatSelect = document.getElementById('json-format-select');
-            const framesList = document.getElementById('frames-list');
-            const rowsInput = document.getElementById('rows-input'), colsInput = document.getElementById('cols-input');
-            const cellWInput = document.getElementById('cell-w-input'), cellHInput = document.getElementById('cell-h-input');
-            const generateGridButton = document.getElementById('generate-grid-button');
-            const generateBySizeButton = document.getElementById('generate-by-size-button');
-            const addHLineButton = document.getElementById('add-h-line'), addVLineButton = document.getElementById('add-v-line');
-            const clearButton = document.getElementById('clear-button'), copyJsonButton = document.getElementById('copy-json-button');
-            const snapCheckbox = document.getElementById('snap-checkbox');
-            const exportZipButton = document.getElementById('export-zip-button');
-            const exportGifButton = document.getElementById('export-gif-button');
-            const previewCanvas = document.getElementById('preview-canvas'), previewCtx = previewCanvas.getContext('2d');
-            const playPauseButton = document.getElementById('play-pause-button');
-            const firstFrameButton = document.getElementById('first-frame-button');
-            const lastFrameButton = document.getElementById('last-frame-button');
-            const fpsSlider = document.getElementById('fps-slider'), fpsValue = document.getElementById('fps-value');
-            const exportCodeButton = document.getElementById('export-code-button');
-            const codeOutputArea = document.getElementById('code-output-area');
-            const htmlCodeOutput = document.getElementById('html-code-output');
-            const cssCodeOutput = document.getElementById('css-code-output');
-            const copyHtmlButton = document.getElementById('copy-html-button');
-            const copyCssButton = document.getElementById('copy-css-button');
-            const allButtons = document.querySelectorAll('button, input, select');
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM Elements ---
+        const appContainer = document.querySelector('.app-container');
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const dropZone = document.getElementById('drop-zone');
+        const imageLoader = document.getElementById('image-loader');
+        const imageDisplay = document.getElementById('image-display');
+        const canvas = document.getElementById('measurement-canvas'), ctx = canvas.getContext('2d');
+        const rulerTop = document.getElementById('ruler-top'), ctxTop = rulerTop.getContext('2d');
+        const rulerLeft = document.getElementById('ruler-left'), ctxLeft = rulerLeft.getContext('2d');
+        const imageDimensionsP = document.getElementById('image-dimensions');
+        const jsonOutput = document.getElementById('json-output');
+        const jsonFormatSelect = document.getElementById('json-format-select');
+        const framesList = document.getElementById('frames-list');
+        const rowsInput = document.getElementById('rows-input'), colsInput = document.getElementById('cols-input');
+        const cellWInput = document.getElementById('cell-w-input'), cellHInput = document.getElementById('cell-h-input');
+        const generateGridButton = document.getElementById('generate-grid-button');
+        const generateBySizeButton = document.getElementById('generate-by-size-button');
+        const addHLineButton = document.getElementById('add-h-line'), addVLineButton = document.getElementById('add-v-line');
+        const clearButton = document.getElementById('clear-button');
+        const snapCheckbox = document.getElementById('snap-checkbox');
+        const exportZipButton = document.getElementById('export-zip-button');
+        const exportGifButton = document.getElementById('export-gif-button');
+        const maxGifSizeInput = document.getElementById('max-gif-size');
+        const previewCanvas = document.getElementById('preview-canvas'), previewCtx = previewCanvas.getContext('2d');
+        const playPauseButton = document.getElementById('play-pause-button');
+        const firstFrameButton = document.getElementById('first-frame-button');
+        const lastFrameButton = document.getElementById('last-frame-button');
+        const fpsSlider = document.getElementById('fps-slider'), fpsValue = document.getElementById('fps-value');
+        const exportCodeButton = document.getElementById('export-code-button');
+        const codeOutputArea = document.getElementById('code-output-area');
+        const htmlCodeOutput = document.getElementById('html-code-output');
+        const cssCodeOutput = document.getElementById('css-code-output');
+        const allControls = document.querySelectorAll('button, input, select');
+        const toast = document.getElementById('toast');
+        const undoButton = document.getElementById('undo-button');
+        const redoButton = document.getElementById('redo-button');
+        const clipsSelect = document.getElementById('clips-select');
+        const newClipButton = document.getElementById('new-clip-button');
+        const renameClipButton = document.getElementById('rename-clip-button');
+        const deleteClipButton = document.getElementById('delete-clip-button');
 
-            // --- App State ---
-            let lines = [], frames = [], selectedLine = null, hoveredLine = null, hoveredFrame = null, isDragging = false;
-            let currentFileName = "spritesheet.png";
-            let animationState = { isPlaying: false, fps: 12, currentFrameIndex: 0, lastTime: 0, animationFrameId: null };
-            const SNAP_VALUE = 10;
-            
-            // --- Initialization & Image Loading ---
-            const setControlsEnabled = (enabled) => {
-                allButtons.forEach(el => { if (el.id !== 'image-loader') el.disabled = !enabled; });
-                if(!enabled) { codeOutputArea.style.display = 'none'; }
-            };
-            setControlsEnabled(false);
+        // --- App State ---
+        let lines = [], frames = [], clips = [], activeClipId = null;
+        let selectedLine = null, hoveredLine = null, hoveredFrame = null, isDragging = false;
+        let currentFileName = "spritesheet.png";
+        let animationState = { isPlaying: false, fps: 12, currentFrameIndex: 0, lastTime: 0, animationFrameId: null };
+        const SNAP_VALUE = 10;
+        let historyStack = [], historyIndex = -1;
 
-            imageLoader.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                if (!file.type.startsWith('image/')) {
-                    alert('Por favor, selecciona un archivo de imagen válido.');
-                    imageLoader.value = '';
-                    return;
+        // --- Initialization ---
+        const setControlsEnabled = (enabled) => {
+            allControls.forEach(el => {
+                if (el.id !== 'image-loader' && el.parentElement.id !== 'drop-zone') {
+                    el.disabled = !enabled;
                 }
-                currentFileName = file.name;
-                const reader = new FileReader();
-                reader.onload = (event) => imageDisplay.src = event.target.result;
-                reader.readAsDataURL(file);
-                imageDimensionsP.textContent = 'Cargando...';
             });
-            
-            imageDisplay.onload = () => {
-                const imgWidth = imageDisplay.naturalWidth, imgHeight = imageDisplay.naturalHeight;
-                canvas.width = rulerTop.width = imgWidth;
-                canvas.height = rulerLeft.height = imgHeight;
-                rulerTop.height = rulerLeft.width = 30;
-                imageDimensionsP.innerHTML = `<strong>${currentFileName}:</strong> ${imgWidth}px &times; ${imgHeight}px`;
-                clearAll();
-                setControlsEnabled(true);
-            };
-
-            // --- Core Logic ---
-            const updateAll = () => {
-                calculateFrames();
-                drawAll();
-                updateResults();
-                resetAnimation();
+            if (!enabled) {
                 codeOutputArea.style.display = 'none';
-            };
+            }
+            updateHistoryButtons();
+        };
+        setControlsEnabled(false);
 
-            const calculateFrames = () => {
-                const oldFrames = new Map(frames.map(f => [f.id, f]));
-                frames = [];
-                const hPositions = [0, ...lines.filter(l => l.type === 'horizontal').map(l => l.position).sort((a,b)=>a-b), canvas.height];
-                const vPositions = [0, ...lines.filter(l => l.type === 'vertical').map(l => l.position).sort((a,b)=>a-b), canvas.width];
-                
-                let frameId = 0;
-                for (let i = 0; i < hPositions.length - 1; i++) {
-                    for (let j = 0; j < vPositions.length - 1; j++) {
-                        const x = vPositions[j], y = hPositions[i];
-                        const w = vPositions[j+1] - x, h = hPositions[i+1] - y;
-                        if (w > 1 && h > 1) {
-                            const id = frameId++;
-                            const oldFrame = oldFrames.get(id);
-                            frames.push({ 
-                                id: id, 
-                                name: oldFrame ? oldFrame.name : `frame_${id}`,
-                                rect: { x:Math.round(x), y:Math.round(y), w:Math.round(w), h:Math.round(h) } 
-                            });
-                        }
-                    }
-                }
-            };
+        // --- History (Undo/Redo) ---
+        const saveState = () => {
+            historyStack = historyStack.slice(0, historyIndex + 1);
+            historyStack.push(JSON.stringify({ lines, frames }));
+            historyIndex++;
+            updateHistoryButtons();
+        };
 
-            // --- Grid Generation ---
-            generateGridButton.addEventListener('click', () => {
-                const rows = parseInt(rowsInput.value); const cols = parseInt(colsInput.value);
-                if (isNaN(rows) || isNaN(cols) || rows < 1 || cols < 1) return;
-                lines = []; const cellHeight = canvas.height / rows; const cellWidth = canvas.width / cols;
-                for (let i = 1; i < rows; i++) lines.push({ id: Date.now() + i, type: 'horizontal', position: i * cellHeight });
-                for (let i = 1; i < cols; i++) lines.push({ id: Date.now() + rows + i, type: 'vertical', position: i * cellWidth });
-                updateAll();
-            });
+        const updateHistoryButtons = () => {
+            undoButton.disabled = historyIndex <= 0;
+            redoButton.disabled = historyIndex >= historyStack.length - 1;
+        };
 
-            generateBySizeButton.addEventListener('click', () => {
-                const cellW = parseInt(cellWInput.value); const cellH = parseInt(cellHInput.value);
-                if (isNaN(cellW) || isNaN(cellH) || cellW < 1 || cellH < 1) return;
-                lines = [];
-                for (let y = cellH; y < canvas.height; y += cellH) lines.push({ id: Date.now() + y, type: 'horizontal', position: y });
-                for (let x = cellW; x < canvas.width; x += cellW) lines.push({ id: Date.now() + x + canvas.height, type: 'vertical', position: x });
-                updateAll();
-            });
+        const undo = () => {
+            if (historyIndex > 0) {
+                historyIndex--;
+                loadState(historyStack[historyIndex]);
+            }
+        };
 
-            // --- Drawing ---
-            const drawAll = (mousePos = null) => {
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                // Draw frames
-                frames.forEach(f => {
-                    const {x,y,w,h} = f.rect;
-                    ctx.fillStyle = (hoveredFrame && hoveredFrame.id === f.id) ? 'rgba(0, 255, 0, 0.3)' : 'rgba(8, 102, 255, 0.15)';
-                    ctx.fillRect(x,y,w,h);
-                    ctx.strokeStyle='rgba(8, 102, 255, 0.4)'; ctx.strokeRect(x,y,w,h);
-                    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='12px Arial'; ctx.fillText(f.id, x+4, y+14);
-                });
-                // Draw lines
-                lines.forEach(l => {
-                    ctx.beginPath();
-                    const isSel = selectedLine && selectedLine.id === l.id;
-                    const isHov = hoveredLine && hoveredLine.id === l.id;
-                    ctx.strokeStyle = isSel ? '#ff0000' : (isHov ? '#f7b928' : '#0866ff');
-                    ctx.lineWidth = isSel ? 3 : 2;
-                    if(l.type==='horizontal'){ ctx.moveTo(0,l.position); ctx.lineTo(canvas.width,l.position); }
-                    else { ctx.moveTo(l.position,0); ctx.lineTo(l.position,canvas.height); }
-                    ctx.stroke();
-                });
-                // Draw mouse coordinates
-                if (mousePos) {
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                    ctx.fillRect(mousePos.x + 10, mousePos.y + 10, 70, 20);
-                    ctx.fillStyle = 'white';
-                    ctx.font = '10px Arial';
-                    ctx.fillText(`X:${Math.round(mousePos.x)}, Y:${Math.round(mousePos.y)}`, mousePos.x + 15, mousePos.y + 23);
-                }
-                drawRulers();
-            };
+        const redo = () => {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                loadState(historyStack[historyIndex]);
+            }
+        };
+        
+        const loadState = (stateString) => {
+            const state = JSON.parse(stateString);
+            lines = state.lines;
+            frames = state.frames;
+            updateAll(false); // Pass false to prevent saving state again
+            updateHistoryButtons();
+        };
 
-            const drawRulers=()=>{ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height);ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);if(!imageDisplay.src||!imageDisplay.complete)return;ctxTop.font=ctxLeft.font='10px Arial';ctxTop.fillStyle=ctxLeft.fillStyle='#333';for(let x=0;x<canvas.width;x+=10){ctxTop.beginPath();ctxTop.moveTo(x,x%50===0?15:22);ctxTop.lineTo(x,30);ctxTop.stroke();if(x%50===0)ctxTop.fillText(x,x+2,12)}for(let y=0;y<canvas.height;y+=10){ctxLeft.beginPath();ctxLeft.moveTo(y%50===0?15:22,y);ctxLeft.lineTo(30,y);ctxLeft.stroke();if(y%50===0)ctxLeft.fillText(y,4,y-2)}};
+        undoButton.addEventListener('click', undo);
+        redoButton.addEventListener('click', redo);
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo(); }
+            if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
+        });
+
+        // --- Image Loading & Drag-Drop ---
+        // ==================================================
+        // === CORRECCIÓN DRAG & DROP AÑADIDA AQUÍ ==========
+        // ==================================================
+        window.addEventListener('dragover', e => e.preventDefault());
+        window.addEventListener('drop', e => e.preventDefault());
+
+        const handleFile = (file) => {
+            if (!file || !file.type.startsWith('image/')) {
+                showToast('Por favor, selecciona un archivo de imagen válido.', 'danger');
+                return;
+            }
+            currentFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = (event) => imageDisplay.src = event.target.result;
+            reader.readAsDataURL(file);
+            imageDimensionsP.textContent = 'Cargando...';
+        };
+
+        imageLoader.addEventListener('change', (e) => handleFile(e.target.files[0]));
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        imageDisplay.onload = () => {
+            welcomeScreen.style.opacity = '0';
+            setTimeout(() => welcomeScreen.style.display = 'none', 300);
+            appContainer.style.visibility = 'visible';
+
+            const imgWidth = imageDisplay.naturalWidth, imgHeight = imageDisplay.naturalHeight;
+            canvas.width = rulerTop.width = imgWidth;
+            canvas.height = rulerLeft.height = imgHeight;
+            rulerTop.height = rulerLeft.width = 30;
+            imageDimensionsP.innerHTML = `<strong>${currentFileName}:</strong> ${imgWidth}px &times; ${imgHeight}px`;
             
-            // --- Results & UI Update ---
-            const updateResults=()=>{
-                updateJsonOutput();
-                framesList.innerHTML='';
-                frames.forEach(f=>{
-                    const li=document.createElement('li');
-                    li.dataset.frameId=f.id;
-                    li.innerHTML = `
-                        <span class="drag-handle">☰</span>
-                        <input type="checkbox" class="frame-checkbox" data-frame-id="${f.id}" checked>
-                        <span class="frame-info">F${f.id}: ${f.name}</span>
-                        <input type="text" class="frame-name-input" value="${f.name}" data-frame-id="${f.id}">
-                        <span class="frame-dims">${f.rect.w}x${f.rect.h}</span>
-                    `;
-                    li.addEventListener('mouseover',()=>{highlightFrame(f.id,true)});
-                    li.addEventListener('mouseout',()=>{highlightFrame(f.id,false)});
-                    framesList.appendChild(li);
-                });
-                // Init SortableJS
-                new Sortable(framesList, {
-                    animation: 150,
-                    handle: '.drag-handle',
-                    onEnd: (evt) => {
-                        const newOrder = Array.from(evt.to.children).map(li => parseInt(li.dataset.frameId));
-                        frames.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
-                        updateAll();
-                    }
-                });
-            };
+            historyStack = [];
+            historyIndex = -1;
+            clearAll(true);
+            setControlsEnabled(true);
+        };
 
-            const updateJsonOutput = () => {
-                const format = jsonFormatSelect.value;
-                let outputObject;
-                const framesData = frames.map(f => ({
-                    name: f.name,
-                    id: f.id,
-                    rect: { x: f.rect.x, y: f.rect.y, w: f.rect.w, h: f.rect.h }
-                }));
+        // --- Core Logic ---
+        const updateAll = (shouldSaveState = true) => {
+            calculateFrames();
+            if (shouldSaveState) saveState();
+            drawAll();
+            updateUI();
+            resetAnimation();
+            codeOutputArea.style.display = 'none';
+        };
 
-                switch(format) {
-                    case 'phaser3':
-                        outputObject = {
-                            frames: framesData.reduce((acc, f) => {
-                                acc[f.name] = {
-                                    frame: { x: f.rect.x, y: f.rect.y, w: f.rect.w, h: f.rect.h },
-                                    spriteSourceSize: { x: 0, y: 0, w: f.rect.w, h: f.rect.h },
-                                    sourceSize: { w: f.rect.w, h: f.rect.h }
-                                };
-                                return acc;
-                            }, {}),
-                            meta: { image: currentFileName, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: 1 }
-                        };
-                        break;
-                    case 'godot':
-                        outputObject = {
-                            "frames": framesData.reduce((acc, f) => {
-                                acc[f.name] = {
-                                    "frame": { "x": f.rect.x, "y": f.rect.y, "w": f.rect.w, "h": f.rect.h },
-                                    "source_size": { "w": f.rect.w, "h": f.rect.h },
-                                    "sprite_source_size": { "x": 0, "y": 0, "w": f.rect.w, "h": f.rect.h }
-                                };
-                                return acc;
-                            }, {}),
-                            "meta": { "app": "Sprite Sheet Tool", "version": "2.0", "image": currentFileName, "format": "RGBA8888", "size": { "w": canvas.width, "h": canvas.height } }
-                        };
-                        break;
-                    default:
-                        outputObject = {
-                            meta: { image: currentFileName, width: canvas.width, height: canvas.height },
-                            frames: framesData
-                        };
-                        break;
-                }
-                jsonOutput.textContent = JSON.stringify(outputObject, null, 2);
-            };
-
-            const highlightFrame=(id,isHighlighted)=>{
-                hoveredFrame=isHighlighted?frames.find(f=>f.id===id):null;
-                const li = document.querySelector(`#frames-list li[data-frame-id="${id}"]`);
-                if (li) {
-                    li.classList.toggle('highlight', isHighlighted);
-                    if (isHighlighted) {
-                        li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }
-                drawAll();
-            };
+        const calculateFrames = () => {
+            const oldFrames = new Map(frames.map(f => [f.id, f]));
+            frames = [];
+            const hPositions = [0, ...lines.filter(l => l.type === 'horizontal').map(l => l.position).sort((a,b)=>a-b), canvas.height];
+            const vPositions = [0, ...lines.filter(l => l.type === 'vertical').map(l => l.position).sort((a,b)=>a-b), canvas.width];
             
-            function clearAll() { lines = []; frames = []; updateAll(); }
-
-            // --- Animation Logic ---
-            const getAnimationFrames = () => {
-                const checkedIds = Array.from(document.querySelectorAll('.frame-checkbox:checked')).map(cb => parseInt(cb.dataset.frameId));
-                return frames.filter(f => checkedIds.includes(f.id));
-            };
-
-            const animationLoop = (timestamp) => {
-                if (!animationState.isPlaying) return;
-                
-                const elapsed = timestamp - animationState.lastTime;
-                const animFrames = getAnimationFrames();
-                if (elapsed > 1000 / animationState.fps && animFrames.length > 0) {
-                    animationState.lastTime = timestamp;
-                    const frame = animFrames[animationState.currentFrameIndex];
-                    const { x, y, w, h } = frame.rect;
-                    const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
-                    const drawW = w * scale; const drawH = h * scale;
-                    const drawX = (previewCanvas.width - drawW) / 2;
-                    const drawY = (previewCanvas.height - drawH) / 2;
-                    
-                    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                    previewCtx.drawImage(imageDisplay, x, y, w, h, drawX, drawY, drawW, drawH);
-                    
-                    animationState.currentFrameIndex = (animationState.currentFrameIndex + 1) % animFrames.length;
-                }
-                animationState.animationFrameId = requestAnimationFrame(animationLoop);
-            };
-
-            const toggleAnimation = () => {
-                animationState.isPlaying = !animationState.isPlaying;
-                const animFrames = getAnimationFrames();
-                if (animationState.isPlaying && animFrames.length > 0) {
-                    playPauseButton.textContent = '⏸️ Pausa';
-                    animationState.lastTime = performance.now();
-                    animationLoop(animationState.lastTime);
-                } else {
-                    playPauseButton.textContent = '▶️ Play';
-                    cancelAnimationFrame(animationState.animationFrameId);
-                }
-            };
-
-            const resetAnimation = () => {
-                if (animationState.isPlaying) toggleAnimation();
-                animationState.currentFrameIndex = 0;
-                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                const animFrames = getAnimationFrames();
-                if (animFrames.length > 0) {
-                    drawFrameInPreview(animFrames[0]);
-                }
-            };
-
-            const drawFrameInPreview = (frame) => {
-                if (!frame) return;
-                const { x, y, w, h } = frame.rect;
-                const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
-                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                previewCtx.drawImage(imageDisplay, x, y, w, h, (previewCanvas.width - w * scale)/2, (previewCanvas.height - h * scale)/2, w*scale, h*scale);
-            };
-
-            // --- Export Logic ---
-            exportZipButton.addEventListener('click', async () => {
-                if (frames.length === 0) return;
-                exportZipButton.textContent = 'Generando...';
-                exportZipButton.disabled = true;
-
-                const zip = new JSZip();
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                
-                const promises = frames.map(frame => {
-                    const { x, y, w, h } = frame.rect;
-                    tempCanvas.width = w; tempCanvas.height = h;
-                    tempCtx.drawImage(imageDisplay, x, y, w, h, 0, 0, w, h);
-                    return new Promise(resolve => {
-                        tempCanvas.toBlob(blob => {
-                            zip.file(`${frame.name}.png`, blob);
-                            resolve();
+            let frameId = 0;
+            for (let i = 0; i < hPositions.length - 1; i++) {
+                for (let j = 0; j < vPositions.length - 1; j++) {
+                    const x = vPositions[j], y = hPositions[i];
+                    const w = vPositions[j+1] - x, h = hPositions[i+1] - y;
+                    if (w > 1 && h > 1) {
+                        const id = frameId++;
+                        const oldFrame = oldFrames.get(id);
+                        frames.push({ 
+                            id: id, 
+                            name: oldFrame ? oldFrame.name : `frame_${id}`,
+                            rect: { x:Math.round(x), y:Math.round(y), w:Math.round(w), h:Math.round(h) } 
                         });
-                    });
-                });
-                
-                await Promise.all(promises);
-                
-                zip.generateAsync({type:"blob"}).then(content => {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(content);
-                    link.download = `${currentFileName.split('.')[0]}_frames.zip`;
-                    link.click();
-                    URL.revokeObjectURL(link.href);
-                });
-
-                exportZipButton.textContent = 'Descargar Frames (ZIP)';
-                exportZipButton.disabled = false;
-            });
-
-            exportGifButton.addEventListener('click', () => {
-                const animFrames = getAnimationFrames();
-                if (animFrames.length === 0) return;
-
-                exportGifButton.textContent = 'Generando GIF...';
-                exportGifButton.disabled = true;
-
-                const gif = new GIF({
-                    workers: 2,
-                    quality: 10,
-                    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
-                });
-
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-
-                animFrames.forEach(frame => {
-                    const { x, y, w, h } = frame.rect;
-                    tempCanvas.width = w;
-                    tempCanvas.height = h;
-                    tempCtx.drawImage(imageDisplay, x, y, w, h, 0, 0, w, h);
-                    gif.addFrame(tempCtx, { copy: true, delay: 1000 / animationState.fps });
-                });
-
-                gif.on('finished', (blob) => {
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = `${currentFileName.split('.')[0]}_animation.gif`;
-                    link.click();
-                    URL.revokeObjectURL(link.href);
-                    exportGifButton.textContent = 'Descargar GIF Animado';
-                    exportGifButton.disabled = false;
-                });
-
-                gif.render();
-            });
-
-            // --- Event Listeners ---
-            playPauseButton.addEventListener('click', toggleAnimation);
-            fpsSlider.addEventListener('input', (e) => {
-                animationState.fps = parseInt(e.target.value);
-                fpsValue.textContent = e.target.value;
-            });
-            firstFrameButton.addEventListener('click', () => {
-                if (animationState.isPlaying) toggleAnimation();
-                animationState.currentFrameIndex = 0;
-                drawFrameInPreview(getAnimationFrames()[0]);
-            });
-            lastFrameButton.addEventListener('click', () => {
-                if (animationState.isPlaying) toggleAnimation();
-                const animFrames = getAnimationFrames();
-                animationState.currentFrameIndex = animFrames.length - 1;
-                drawFrameInPreview(animFrames[animationState.currentFrameIndex]);
-            });
-            jsonFormatSelect.addEventListener('change', updateJsonOutput);
-
-            // Frame list interaction
-            framesList.addEventListener('dblclick', (e) => {
-                if (e.target.classList.contains('frame-info')) {
-                    const li = e.target.parentElement;
-                    const infoSpan = li.querySelector('.frame-info');
-                    const nameInput = li.querySelector('.frame-name-input');
-                    infoSpan.style.display = 'none';
-                    nameInput.style.display = 'inline-block';
-                    nameInput.focus();
-                    nameInput.select();
-                }
-            });
-
-            framesList.addEventListener('focusout', (e) => {
-                if (e.target.classList.contains('frame-name-input')) {
-                    const input = e.target;
-                    const frameId = parseInt(input.dataset.frameId);
-                    const frame = frames.find(f => f.id === frameId);
-                    if (frame) frame.name = input.value;
-                    updateAll();
-                }
-            });
-
-            framesList.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && e.target.classList.contains('frame-name-input')) {
-                    e.target.blur();
-                }
-            });
-
-            framesList.addEventListener('change', (e) => {
-                if (e.target.classList.contains('frame-checkbox')) {
-                    resetAnimation();
-                }
-            });
-
-            // Canvas interaction
-            const getMousePos=(e)=>({x:(e.clientX-canvas.getBoundingClientRect().left)*(canvas.width/canvas.clientWidth),y:(e.clientY-canvas.getBoundingClientRect().top)*(canvas.height/canvas.clientHeight)});
-            const getLineAtPos=(pos)=>lines.find(l=>(l.type==='horizontal'&&Math.abs(pos.y-l.position)<5)||(l.type==='vertical'&&Math.abs(pos.x-l.position)<5))||null;
-            
-            canvas.addEventListener('mousedown',(e)=>{if(imageDisplay.src){selectedLine=getLineAtPos(getMousePos(e));if(selectedLine)isDragging=true;drawAll()}});
-            canvas.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
-            canvas.addEventListener('mouseleave',()=>{isDragging=false;selectedLine=null;hoveredLine=null;updateAll()});
-            canvas.addEventListener('dblclick', (e) => {
-                const lineToDelete = getLineAtPos(getMousePos(e));
-                if (lineToDelete && !isDragging) {
-                    lines = lines.filter(l => l.id !== lineToDelete.id);
-                    updateAll();
-                }
-            });
-            canvas.addEventListener('mousemove',(e)=>{
-                const pos=getMousePos(e);
-                if(isDragging&&selectedLine){
-                    if(selectedLine.type==='horizontal') {
-                        selectedLine.position = snapCheckbox.checked ? Math.round(pos.y / SNAP_VALUE) * SNAP_VALUE : pos.y;
-                    } else {
-                        selectedLine.position = snapCheckbox.checked ? Math.round(pos.x / SNAP_VALUE) * SNAP_VALUE : pos.x;
                     }
+                }
+            }
+            // Auto-create default clip if none exist
+            if (clips.length === 0 && frames.length > 0) {
+                createNewClip("Default", frames.map(f => f.id));
+            }
+        };
+
+        // --- UI Update ---
+        const updateUI = () => {
+            updateClipsSelect();
+            updateFramesList();
+            updateJsonOutput();
+        };
+
+        // --- Drawing ---
+        const drawAll = (mousePos = null) => {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            frames.forEach(f => {
+                const {x,y,w,h} = f.rect;
+                ctx.fillStyle = (hoveredFrame && hoveredFrame.id === f.id) ? 'rgba(158, 206, 255, 0.4)' : 'rgba(122, 162, 247, 0.15)';
+                ctx.fillRect(x,y,w,h);
+                ctx.strokeStyle='rgba(122, 162, 247, 0.5)'; ctx.strokeRect(x,y,w,h);
+                ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='12px var(--font-sans)'; ctx.fillText(f.id, x+4, y+14);
+            });
+            lines.forEach(l => {
+                ctx.beginPath();
+                const isSel = selectedLine && selectedLine.id === l.id;
+                const isHov = hoveredLine && hoveredLine.id === l.id;
+                ctx.strokeStyle = isSel ? 'var(--danger)' : (isHov ? 'var(--warning)' : 'var(--primary)');
+                ctx.lineWidth = isSel ? 3 : 2;
+                if(l.type==='horizontal'){ ctx.moveTo(0,l.position); ctx.lineTo(canvas.width,l.position); }
+                else { ctx.moveTo(l.position,0); ctx.lineTo(l.position,canvas.height); }
+                ctx.stroke();
+            });
+            if (mousePos) {
+                ctx.fillStyle = 'rgba(0,0,0,0.7)';
+                ctx.fillRect(mousePos.x + 10, mousePos.y + 10, 70, 20);
+                ctx.fillStyle = 'white';
+                ctx.font = '10px var(--font-sans)';
+                ctx.fillText(`X:${Math.round(mousePos.x)}, Y:${Math.round(mousePos.y)}`, mousePos.x + 15, mousePos.y + 23);
+            }
+            drawRulers();
+        };
+        const drawRulers=()=>{ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height);ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);if(!imageDisplay.src||!imageDisplay.complete)return;ctxTop.font=ctxLeft.font='10px var(--font-sans)';ctxTop.fillStyle=ctxLeft.fillStyle='var(--text-secondary)';for(let x=0;x<canvas.width;x+=10){ctxTop.beginPath();ctxTop.moveTo(x,x%50===0?15:22);ctxTop.lineTo(x,30);ctxTop.stroke();if(x%50===0)ctxTop.fillText(x,x+2,12)}for(let y=0;y<canvas.height;y+=10){ctxLeft.beginPath();ctxLeft.moveTo(y%50===0?15:22,y);ctxLeft.lineTo(30,y);ctxLeft.stroke();if(y%50===0)ctxLeft.fillText(y,4,y-2)}};
+
+        // --- Clip Management ---
+        const getActiveClip = () => clips.find(c => c.id === activeClipId);
+
+        const createNewClip = (name, frameIds = []) => {
+            const newName = name || prompt("Nombre del nuevo clip:", `Clip ${clips.length + 1}`);
+            if (!newName) return;
+            const newClip = { id: Date.now(), name: newName, frameIds };
+            clips.push(newClip);
+            activeClipId = newClip.id;
+            updateUI();
+        };
+
+        const renameActiveClip = () => {
+            const clip = getActiveClip();
+            if (!clip) return;
+            const newName = prompt("Nuevo nombre para el clip:", clip.name);
+            if (newName) {
+                clip.name = newName;
+                updateUI();
+            }
+        };
+
+        const deleteActiveClip = () => {
+            if (clips.length <= 1) {
+                showToast("No puedes eliminar el último clip.", 'warning');
+                return;
+            }
+            if (confirm(`¿Seguro que quieres eliminar el clip "${getActiveClip().name}"?`)) {
+                clips = clips.filter(c => c.id !== activeClipId);
+                activeClipId = clips[0]?.id || null;
+                updateUI();
+            }
+        };
+
+        const updateClipsSelect = () => {
+            clipsSelect.innerHTML = '';
+            clips.forEach(clip => {
+                const option = document.createElement('option');
+                option.value = clip.id;
+                option.textContent = clip.name;
+                if (clip.id === activeClipId) option.selected = true;
+                clipsSelect.appendChild(option);
+            });
+        };
+
+        newClipButton.addEventListener('click', () => createNewClip());
+        renameClipButton.addEventListener('click', renameActiveClip);
+        deleteClipButton.addEventListener('click', deleteActiveClip);
+        clipsSelect.addEventListener('change', (e) => {
+            activeClipId = parseInt(e.target.value);
+            updateFramesList();
+            resetAnimation();
+        });
+
+        // --- Frames List ---
+        const updateFramesList = () => {
+            framesList.innerHTML = '';
+            const activeClip = getActiveClip();
+            frames.forEach(f => {
+                const li = document.createElement('li');
+                li.dataset.frameId = f.id;
+                const isChecked = activeClip?.frameIds.includes(f.id) ? 'checked' : '';
+                li.innerHTML = `
+                    <span class="drag-handle">☰</span>
+                    <input type="checkbox" class="frame-checkbox" data-frame-id="${f.id}" ${isChecked}>
+                    <span class="frame-info">F${f.id}: ${f.name}</span>
+                    <input type="text" class="frame-name-input" value="${f.name}" data-frame-id="${f.id}">
+                    <span class="frame-dims">${f.rect.w}x${f.rect.h}</span>
+                `;
+                li.addEventListener('mouseover', () => highlightFrame(f.id, true));
+                li.addEventListener('mouseout', () => highlightFrame(f.id, false));
+                framesList.appendChild(li);
+            });
+            new Sortable(framesList, {
+                animation: 150, handle: '.drag-handle',
+                onEnd: (evt) => {
+                    const newOrder = Array.from(evt.to.children).map(li => parseInt(li.dataset.frameId));
+                    frames.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+                    updateAll();
+                }
+            });
+        };
+
+        framesList.addEventListener('change', (e) => {
+            if (e.target.classList.contains('frame-checkbox')) {
+                const frameId = parseInt(e.target.dataset.frameId);
+                const clip = getActiveClip();
+                if (!clip) return;
+                if (e.target.checked) {
+                    if (!clip.frameIds.includes(frameId)) clip.frameIds.push(frameId);
                 } else {
-                    hoveredLine = getLineAtPos(pos);
-                    canvas.style.cursor=hoveredLine?(hoveredLine.type==='horizontal'?'row-resize':'col-resize'):'default';
-                    const frame=frames.find(f=>pos.x>=f.rect.x&&pos.x<=f.rect.x+f.rect.w&&pos.y>=f.rect.y&&pos.y<=f.rect.y+f.rect.h);
-                    if (frame && (!hoveredFrame || hoveredFrame.id !== frame.id)) {
-                        highlightFrame(frame.id, true);
-                    } else if (!frame && hoveredFrame) {
-                        highlightFrame(hoveredFrame.id, false);
-                    }
+                    clip.frameIds = clip.frameIds.filter(id => id !== frameId);
                 }
-                drawAll(pos);
-            });
-
-            // Other buttons
-            addHLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'horizontal', position: canvas.height / 2 }); updateAll(); }});
-            addVLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'vertical', position: canvas.width / 2 }); updateAll(); }});
-            clearButton.addEventListener('click', clearAll);
-            const copyHandler=(el,textEl)=>{navigator.clipboard.writeText(textEl.textContent).then(()=>{const t=el.textContent;el.textContent="¡Copiado!",setTimeout((()=>el.textContent=t),2000)})};
-            copyJsonButton.addEventListener('click',()=>copyHandler(copyJsonButton,jsonOutput));
-            copyHtmlButton.addEventListener('click',()=>copyHandler(copyHtmlButton,htmlCodeOutput));
-            copyCssButton.addEventListener('click',()=>copyHandler(copyCssButton,cssCodeOutput));
-            exportCodeButton.addEventListener('click', () => {
-                const animFrames = getAnimationFrames();
-                if (animFrames.length === 0) return;
-                const { htmlCode, cssCode } = generateCssAnimationCode(animFrames);
-                htmlCodeOutput.textContent = htmlCode;
-                cssCodeOutput.textContent = cssCode;
-                codeOutputArea.style.display = 'block';
-            });
-            function generateCssAnimationCode(animFrames) {
-                const firstFrame = animFrames[0].rect; const frameCount = animFrames.length;
-                const htmlCode = `<!DOCTYPE html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8">\n    <title>Animación de Sprite</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Mi Animación</h1>\n    <div class="sprite-container"></div>\n</body>\n</html>`;
-                let keyframesSteps = animFrames.map((frame, index) => {
-                    const { x, y } = frame.rect;
-                    const stepPercentage = Math.round((index / frameCount) * 100);
-                    return `    ${stepPercentage}% { background-position: -${x}px -${y}px; }`;
-                }).join('\n');
-                const cssCode = `body {\n    display: flex; justify-content: center; align-items: center; flex-direction: column;\n    min-height: 100vh; background-color: #2c3e50; font-family: sans-serif;\n}\n.sprite-container {\n    width: ${firstFrame.w}px; height: ${firstFrame.h}px;\n    background-image: url('${currentFileName}');\n    background-repeat: no-repeat;\n    transform: scale(2); /* Ajusta la escala */\n    image-rendering: pixelated;\n    animation: run-cycle ${((1 / animationState.fps) * frameCount).toFixed(2)}s steps(${frameCount - 1}, end) infinite;\n}\n@keyframes run-cycle {\n${keyframesSteps}\n    100% { background-position: -${animFrames[frameCount-1].rect.x}px -${animFrames[frameCount-1].rect.y}px; }\n}`;
-                return { htmlCode, cssCode };
+                resetAnimation();
             }
         });
+
+        // --- Animation ---
+        const getAnimationFrames = () => {
+            const clip = getActiveClip();
+            if (!clip) return [];
+            return clip.frameIds.map(id => frames.find(f => f.id === id)).filter(Boolean);
+        };
+        
+        const animationLoop = (timestamp) => {
+            if (!animationState.isPlaying) return;
+            const elapsed = timestamp - animationState.lastTime;
+            const animFrames = getAnimationFrames();
+            if (elapsed > 1000 / animationState.fps && animFrames.length > 0) {
+                animationState.lastTime = timestamp;
+                const frame = animFrames[animationState.currentFrameIndex];
+                drawFrameInPreview(frame);
+                animationState.currentFrameIndex = (animationState.currentFrameIndex + 1) % animFrames.length;
+            }
+            animationState.animationFrameId = requestAnimationFrame(animationLoop);
+        };
+        const toggleAnimation = () => {
+            animationState.isPlaying = !animationState.isPlaying;
+            const animFrames = getAnimationFrames();
+            if (animationState.isPlaying && animFrames.length > 0) {
+                playPauseButton.textContent = '⏸️';
+                animationState.lastTime = performance.now();
+                animationLoop(animationState.lastTime);
+            } else {
+                playPauseButton.textContent = '▶️';
+                cancelAnimationFrame(animationState.animationFrameId);
+            }
+        };
+        const resetAnimation = () => {
+            if (animationState.isPlaying) toggleAnimation();
+            animationState.currentFrameIndex = 0;
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            const animFrames = getAnimationFrames();
+            if (animFrames.length > 0) drawFrameInPreview(animFrames[0]);
+        };
+        const drawFrameInPreview = (frame) => {
+            if (!frame) {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                return;
+            }
+            const { x, y, w, h } = frame.rect;
+            const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            previewCtx.drawImage(imageDisplay, x, y, w, h, (previewCanvas.width - w * scale)/2, (previewCanvas.height - h * scale)/2, w*scale, h*scale);
+        };
+
+        // --- Export & Utility ---
+        const showToast = (message, type = 'success') => {
+            toast.textContent = message;
+            toast.style.backgroundColor = `var(--${type})`;
+            toast.style.bottom = '20px';
+            setTimeout(() => { toast.style.bottom = '-100px'; }, 2500);
+        };
+
+        const highlightSyntax = (str, lang) => {
+            str = str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            if (lang === 'json') {
+                return str
+                    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?)/g, (match) => {
+                        if (/:$/.test(match)) return `<span class="token-key">${match.slice(0, -1)}</span>:`;
+                        return `<span class="token-string">${match}</span>`;
+                    })
+                    .replace(/\b(true|false|null)\b/g, '<span class="token-keyword">$&</span>')
+                    .replace(/\b-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?\b/g, '<span class="token-number">$&</span>')
+                    .replace(/[{}[\](),:]/g, '<span class="token-punctuation">$&</span>');
+            }
+            if (lang === 'html') {
+                 return str.replace(/(&lt;[a-zA-Z0-9\/?]+|&gt;)/g, '<span class="token-tag">$&</span>')
+                    .replace(/([a-zA-Z-]+)=/g, '<span class="token-attr-name">$&</span>')
+                    .replace(/"(.*?)"/g, '"<span class="token-attr-value">$1</span>"');
+            }
+            if (lang === 'css') {
+                return str.replace(/([a-zA-Z-]+)(?=:)/g, '<span class="token-property">$&</span>')
+                   .replace(/(body|@keyframes|\.sprite-container)/g, '<span class="token-selector">$&</span>');
+            }
+            return str;
+        };
+
+        const updateJsonOutput = () => {
+            const format = jsonFormatSelect.value;
+            let outputObject;
+            const framesData = frames.map(f => ({ name: f.name, id: f.id, rect: f.rect }));
+            const meta = {
+                app: "Sprite Sheet Suite v3.1", image: currentFileName,
+                size: { w: canvas.width, h: canvas.height },
+                clips: clips.map(c => ({ name: c.name, frames: c.frameIds }))
+            };
+
+            switch(format) {
+                case 'phaser3':
+                    outputObject = { frames: framesData.reduce((acc, f) => { acc[f.name] = { frame: f.rect, spriteSourceSize: { x: 0, y: 0, ...f.rect }, sourceSize: f.rect }; return acc; }, {}), meta };
+                    break;
+                case 'godot':
+                    outputObject = { frames: framesData.reduce((acc, f) => { acc[f.name] = { frame: f.rect, source_size: {w: f.rect.w, h: f.rect.h}, sprite_source_size: {x:0, y:0, ...f.rect} }; return acc; }, {}), meta };
+                    break;
+                default:
+                    outputObject = { meta, frames: framesData };
+                    break;
+            }
+            jsonOutput.innerHTML = highlightSyntax(JSON.stringify(outputObject, null, 2), 'json');
+        };
+
+        // --- Event Listeners ---
+        function clearAll(isInitial = false) {
+            lines = []; frames = []; clips = []; activeClipId = null;
+            if (isInitial) {
+                updateAll(true);
+            } else {
+                updateAll();
+            }
+        }
+        clearButton.addEventListener('click', () => clearAll());
+        
+        playPauseButton.addEventListener('click', toggleAnimation);
+        fpsSlider.addEventListener('input', (e) => { animationState.fps = parseInt(e.target.value); fpsValue.textContent = e.target.value; });
+        firstFrameButton.addEventListener('click', () => { if (animationState.isPlaying) toggleAnimation(); animationState.currentFrameIndex = 0; drawFrameInPreview(getAnimationFrames()[0]); });
+        lastFrameButton.addEventListener('click', () => { if (animationState.isPlaying) toggleAnimation(); const animFrames = getAnimationFrames(); animationState.currentFrameIndex = animFrames.length - 1; drawFrameInPreview(animFrames[animationState.currentFrameIndex]); });
+        jsonFormatSelect.addEventListener('change', updateJsonOutput);
+        
+        const highlightFrame=(id,isHighlighted)=>{hoveredFrame=isHighlighted?frames.find(f=>f.id===id):null;const li=document.querySelector(`#frames-list li[data-frame-id="${id}"]`);if(li){li.classList.toggle('highlight',isHighlighted);if(isHighlighted)li.scrollIntoView({behavior:'smooth',block:'nearest'})}drawAll()};
+        const getMousePos=(e)=>({x:(e.clientX-canvas.getBoundingClientRect().left)*(canvas.width/canvas.clientWidth),y:(e.clientY-canvas.getBoundingClientRect().top)*(canvas.height/canvas.clientHeight)});
+        const getLineAtPos=(pos)=>lines.find(l=>(l.type==='horizontal'&&Math.abs(pos.y-l.position)<5)||(l.type==='vertical'&&Math.abs(pos.x-l.position)<5))||null;
+        canvas.addEventListener('mousedown',(e)=>{if(imageDisplay.src){selectedLine=getLineAtPos(getMousePos(e));if(selectedLine)isDragging=true;drawAll()}});
+        canvas.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
+        canvas.addEventListener('mouseleave',()=>{isDragging=false;selectedLine=null;hoveredLine=null;updateAll()});
+        canvas.addEventListener('dblclick',(e)=>{const lineToDelete=getLineAtPos(getMousePos(e));if(lineToDelete&&!isDragging){lines=lines.filter(l=>l.id!==lineToDelete.id);updateAll()}});
+        canvas.addEventListener('mousemove',(e)=>{const pos=getMousePos(e);if(isDragging&&selectedLine){if(selectedLine.type==='horizontal')selectedLine.position=snapCheckbox.checked?Math.round(pos.y/SNAP_VALUE)*SNAP_VALUE:pos.y;else selectedLine.position=snapCheckbox.checked?Math.round(pos.x/SNAP_VALUE)*SNAP_VALUE:pos.x}else{hoveredLine=getLineAtPos(pos);canvas.style.cursor=hoveredLine?(hoveredLine.type==='horizontal'?'row-resize':'col-resize'):'default';const frame=frames.find(f=>pos.x>=f.rect.x&&pos.x<=f.rect.x+f.rect.w&&pos.y>=f.rect.y&&pos.y<=f.rect.y+f.rect.h);if(frame&&(!hoveredFrame||hoveredFrame.id!==frame.id))highlightFrame(frame.id,true);else if(!frame&&hoveredFrame)highlightFrame(hoveredFrame.id,false)}drawAll(pos)});
+        addHLineButton.addEventListener('click',()=>{if(imageDisplay.src){lines.push({id:Date.now(),type:'horizontal',position:canvas.height/2});updateAll()}});
+        addVLineButton.addEventListener('click',()=>{if(imageDisplay.src){lines.push({id:Date.now(),type:'vertical',position:canvas.width/2});updateAll()}});
+        generateGridButton.addEventListener('click',()=>{const r=parseInt(rowsInput.value),c=parseInt(colsInput.value);if(isNaN(r)||isNaN(c)||r<1||c<1)return;lines=[];const h=canvas.height/r,w=canvas.width/c;for(let i=1;i<r;i++)lines.push({id:Date.now()+i,type:'horizontal',position:i*h});for(let i=1;i<c;i++)lines.push({id:Date.now()+r+i,type:'vertical',position:i*w});updateAll()});
+        generateBySizeButton.addEventListener('click',()=>{const w=parseInt(cellWInput.value),h=parseInt(cellHInput.value);if(isNaN(w)||isNaN(h)||w<1||h<1)return;lines=[];for(let y=h;y<canvas.height;y+=h)lines.push({id:Date.now()+y,type:'horizontal',position:y});for(let x=w;x<canvas.width;x+=w)lines.push({id:Date.now()+x+canvas.height,type:'vertical',position:x});updateAll()});
+        
+        document.body.addEventListener('click', (e) => {
+            if (e.target.classList.contains('copy-button')) {
+                const pre = e.target.previousElementSibling;
+                navigator.clipboard.writeText(pre.textContent).then(() => showToast('¡Copiado al portapapeles!'));
+            }
+        });
+
+        exportCodeButton.addEventListener('click', () => {
+            const animFrames = getAnimationFrames();
+            if (animFrames.length === 0) return;
+            const { htmlCode, cssCode } = generateCssAnimationCode(animFrames);
+            htmlCodeOutput.innerHTML = highlightSyntax(htmlCode, 'html');
+            cssCodeOutput.innerHTML = highlightSyntax(cssCode, 'css');
+            codeOutputArea.style.display = 'block';
+        });
+        
+        function generateCssAnimationCode(animFrames) {
+            const firstFrame = animFrames[0].rect; const frameCount = animFrames.length;
+            const htmlCode = `<!DOCTYPE html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8">\n    <title>Animación de Sprite</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <div class="sprite-container"></div>\n</body>\n</html>`;
+            let keyframesSteps = animFrames.map((frame, index) => {
+                const { x, y } = frame.rect;
+                const stepPercentage = Math.round((index / frameCount) * 100);
+                return `    ${stepPercentage}% { background-position: -${x}px -${y}px; }`;
+            }).join('\n');
+            const cssCode = `.sprite-container {\n    width: ${firstFrame.w}px; height: ${firstFrame.h}px;\n    background-image: url('${currentFileName}');\n    animation: run-cycle ${((1 / animationState.fps) * frameCount).toFixed(2)}s steps(${frameCount - 1}, end) infinite;\n}\n@keyframes run-cycle {\n${keyframesSteps}\n    100% { background-position: -${animFrames[frameCount-1].rect.x}px -${animFrames[frameCount-1].rect.y}px; }\n}`;
+            return { htmlCode, cssCode };
+        }
+        exportGifButton.addEventListener('click', () => {
+            const animFrames = getAnimationFrames();
+            if (animFrames.length === 0) return showToast("No hay frames en este clip para exportar.", 'warning');
+            showToast("Generando GIF, por favor espera...", 'primary');
+            const gif = new GIF({ workers: 2, quality: 10, workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js' });
+            const tempCanvas = document.createElement('canvas'), tempCtx = tempCanvas.getContext('2d');
+            const maxSize = parseInt(maxGifSizeInput.value) || 128;
+            animFrames.forEach(frame => {
+                const { x, y, w, h } = frame.rect;
+                let drawW = w, drawH = h;
+                if (w > maxSize || h > maxSize) { if (w > h) { drawW = maxSize; drawH = (h / w) * maxSize; } else { drawH = maxSize; drawW = (w / h) * maxSize; } }
+                tempCanvas.width = Math.round(drawW); tempCanvas.height = Math.round(drawH);
+                tempCtx.drawImage(imageDisplay, x, y, w, h, 0, 0, tempCanvas.width, tempCanvas.height);
+                gif.addFrame(tempCanvas, { copy: true, delay: 1000 / animationState.fps });
+            });
+            gif.on('finished', (blob) => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `${currentFileName.split('.')[0]}_${getActiveClip().name}.gif`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            });
+            gif.render();
+        });
+    });
     </script>
 </body>
 </html>
