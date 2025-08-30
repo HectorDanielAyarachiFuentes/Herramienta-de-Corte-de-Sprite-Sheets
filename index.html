@@ -93,6 +93,7 @@
         button:hover { background-color: var(--primary); color: var(--bg-dark); }
         button:disabled { background-color: var(--bg-surface); color: #6b7280; border-color: var(--border-color); cursor: not-allowed; }
         button.icon-btn { padding: 8px 10px; }
+        button.small-action { padding: 4px 10px; font-size: 0.8em; margin: 0; }
         .input-group { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
         input[type="number"], select {
             width: 70px; padding: 5px; background-color: var(--bg-dark);
@@ -224,6 +225,7 @@
 
         /* --- Footer --- */
         .app-footer {
+            display: none; /* Oculto por defecto */
             width: 100%;
             max-width: 1600px;
             text-align: center;
@@ -232,6 +234,9 @@
             border-top: 1px solid var(--border-color);
             color: var(--text-secondary);
             font-size: 0.9em;
+        }
+        body.app-loaded .app-footer {
+            display: block; /* Se muestra cuando la app está cargada */
         }
         .app-footer p {
             margin: 0;
@@ -336,6 +341,13 @@
                 </div>
                 <h3>Frames del Clip</h3>
                 <p class="help-text">Selecciona los frames para incluirlos en la animación.</p>
+                <!-- ================================================== -->
+                <!-- === BOTONES DE SELECCIÓN AÑADIDOS AQUÍ =========== -->
+                <!-- ================================================== -->
+                <div class="input-group" style="margin-bottom: 10px;">
+                    <button id="select-all-frames" class="small-action">Todos</button>
+                    <button id="deselect-all-frames" class="small-action">Ninguno</button>
+                </div>
                 <ul id="frames-list"></ul>
             </div>
             <div class="panel">
@@ -471,6 +483,8 @@
         const newClipButton = document.getElementById('new-clip-button');
         const renameClipButton = document.getElementById('rename-clip-button');
         const deleteClipButton = document.getElementById('delete-clip-button');
+        const selectAllFramesButton = document.getElementById('select-all-frames');
+        const deselectAllFramesButton = document.getElementById('deselect-all-frames');
 
         // --- App State ---
         let lines = [], frames = [], clips = [], activeClipId = null;
@@ -565,6 +579,7 @@
             welcomeScreen.style.opacity = '0';
             setTimeout(() => welcomeScreen.style.display = 'none', 300);
             appContainer.style.visibility = 'visible';
+            document.body.classList.add('app-loaded'); // Show footer
 
             const imgWidth = imageDisplay.naturalWidth, imgHeight = imageDisplay.naturalHeight;
             canvas.width = rulerTop.width = imgWidth;
@@ -751,6 +766,22 @@
             }
         });
 
+        selectAllFramesButton.addEventListener('click', () => {
+            const clip = getActiveClip();
+            if (!clip) return;
+            clip.frameIds = frames.map(f => f.id);
+            updateFramesList();
+            resetAnimation();
+        });
+
+        deselectAllFramesButton.addEventListener('click', () => {
+            const clip = getActiveClip();
+            if (!clip) return;
+            clip.frameIds = [];
+            updateFramesList();
+            resetAnimation();
+        });
+
         // --- Animation ---
         const getAnimationFrames = () => {
             const clip = getActiveClip();
@@ -841,7 +872,7 @@
             let outputObject;
             const framesData = frames.map(f => ({ name: f.name, id: f.id, rect: f.rect }));
             const meta = {
-                app: "Sprite Sheet Suite v3.6", image: currentFileName,
+                app: "Sprite Sheet Suite v3.7", image: currentFileName,
                 size: { w: canvas.width, h: canvas.height },
                 clips: clips.map(c => ({ name: c.name, frames: c.frameIds }))
             };
@@ -871,6 +902,20 @@
         }
         clearButton.addEventListener('click', () => clearAll());
         
+        const resetClipsAndSelectAll = () => {
+            clips = [];
+            activeClipId = null;
+        };
+
+        const handleGridGeneration = (newLines) => {
+            resetClipsAndSelectAll();
+            lines = newLines;
+            updateAll();
+        };
+
+        generateGridButton.addEventListener('click',()=>{const r=parseInt(rowsInput.value),c=parseInt(colsInput.value);if(isNaN(r)||isNaN(c)||r<1||c<1)return;let newLines=[];const h=canvas.height/r,w=canvas.width/c;for(let i=1;i<r;i++)newLines.push({id:Date.now()+i,type:'horizontal',position:i*h});for(let i=1;i<c;i++)newLines.push({id:Date.now()+r+i,type:'vertical',position:i*w});handleGridGeneration(newLines)});
+        generateBySizeButton.addEventListener('click',()=>{const w=parseInt(cellWInput.value),h=parseInt(cellHInput.value);if(isNaN(w)||isNaN(h)||w<1||h<1)return;let newLines=[];for(let y=h;y<canvas.height;y+=h)newLines.push({id:Date.now()+y,type:'horizontal',position:y});for(let x=w;x<canvas.width;x+=w)newLines.push({id:Date.now()+x+canvas.height,type:'vertical',position:x});handleGridGeneration(newLines)});
+        
         playPauseButton.addEventListener('click', toggleAnimation);
         fpsSlider.addEventListener('input', (e) => { animationState.fps = parseInt(e.target.value); fpsValue.textContent = e.target.value; });
         firstFrameButton.addEventListener('click', () => { if (animationState.isPlaying) toggleAnimation(); animationState.currentFrameIndex = 0; drawFrameInPreview(getAnimationFrames()[0]); });
@@ -887,8 +932,6 @@
         canvas.addEventListener('mousemove',(e)=>{const pos=getMousePos(e);if(isDragging&&selectedLine){if(selectedLine.type==='horizontal')selectedLine.position=snapCheckbox.checked?Math.round(pos.y/SNAP_VALUE)*SNAP_VALUE:pos.y;else selectedLine.position=snapCheckbox.checked?Math.round(pos.x/SNAP_VALUE)*SNAP_VALUE:pos.x}else{hoveredLine=getLineAtPos(pos);canvas.style.cursor=hoveredLine?(hoveredLine.type==='horizontal'?'row-resize':'col-resize'):'default';const frame=frames.find(f=>pos.x>=f.rect.x&&pos.x<=f.rect.x+f.rect.w&&pos.y>=f.rect.y&&pos.y<=f.rect.y+f.rect.h);if(frame&&(!hoveredFrame||hoveredFrame.id!==frame.id))highlightFrame(frame.id,true);else if(!frame&&hoveredFrame)highlightFrame(hoveredFrame.id,false)}drawAll(pos)});
         addHLineButton.addEventListener('click',()=>{if(imageDisplay.src){lines.push({id:Date.now(),type:'horizontal',position:canvas.height/2});updateAll()}});
         addVLineButton.addEventListener('click',()=>{if(imageDisplay.src){lines.push({id:Date.now(),type:'vertical',position:canvas.width/2});updateAll()}});
-        generateGridButton.addEventListener('click',()=>{const r=parseInt(rowsInput.value),c=parseInt(colsInput.value);if(isNaN(r)||isNaN(c)||r<1||c<1)return;lines=[];const h=canvas.height/r,w=canvas.width/c;for(let i=1;i<r;i++)lines.push({id:Date.now()+i,type:'horizontal',position:i*h});for(let i=1;i<c;i++)lines.push({id:Date.now()+r+i,type:'vertical',position:i*w});updateAll()});
-        generateBySizeButton.addEventListener('click',()=>{const w=parseInt(cellWInput.value),h=parseInt(cellHInput.value);if(isNaN(w)||isNaN(h)||w<1||h<1)return;lines=[];for(let y=h;y<canvas.height;y+=h)lines.push({id:Date.now()+y,type:'horizontal',position:y});for(let x=w;x<canvas.width;x+=w)lines.push({id:Date.now()+x+canvas.height,type:'vertical',position:x});updateAll()});
         
         document.body.addEventListener('click', (e) => {
             if (e.target.classList.contains('copy-button')) {
@@ -929,9 +972,6 @@
             codePreviewContainer.style.display = 'grid';
         });
         
-        // ==================================================
-        // === FUNCIÓN DE GENERACIÓN DE CÓDIGO CORREGIDA ====
-        // ==================================================
         function generateCssAnimationCode(animFrames) {
             const firstFrame = animFrames[0].rect;
             const frameCount = animFrames.length;
@@ -958,6 +998,7 @@
                 const percentage = (index / frameCount) * 100;
                 return `    ${percentage.toFixed(2)}% { background-position: -${x}px -${y}px; }`;
             }).join('\n');
+            keyframesSteps += `\n    100% { background-position: -${animFrames[0].rect.x}px -${animFrames[0].rect.y}px; }`;
 
             const cssCode = `/* Estilos generales para la página de demostración */
 body {
