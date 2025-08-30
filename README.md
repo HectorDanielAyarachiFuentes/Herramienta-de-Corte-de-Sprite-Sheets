@@ -1,6 +1,7 @@
 # 🚀 Sprite Sheet Suite v3.9 "Phoenix"
 
- <!-- Reemplaza esto con una URL a una captura de pantalla atractiva de tu herramienta -->
+
+<!-- Reemplaza la URL de arriba con una captura de pantalla atractiva de tu herramienta -->
 
 Una suite de herramientas web profesional, todo en uno, para cortar, previsualizar y exportar animaciones desde hojas de sprites (*sprite sheets*). Diseñada para desarrolladores de juegos, artistas de píxeles y animadores que buscan un flujo de trabajo rápido, intuitivo y persistente directamente en el navegador.
 
@@ -10,60 +11,48 @@ Una suite de herramientas web profesional, todo en uno, para cortar, previsualiz
 
 Esta no es una simple herramienta de corte. Es una estación de trabajo completa con características avanzadas:
 
-*   **🎨 Interfaz Moderna y Responsiva:** Un tema oscuro profesional (`Phoenix`) que se adapta a cualquier tamaño de pantalla, desde un monitor de escritorio hasta una tablet.
-*   **✂️ Edición de Parrilla Precisa:**
-    *   **Generación Automática:** Crea una parrilla por número de filas/columnas o por el tamaño exacto de cada celda en píxeles.
-    *   **Ajuste Manual:** Arrastra, añade o elimina líneas de la parrilla con total libertad.
-    *   **Snap to Grid:** Activa el ajuste a la parrilla para un control de píxeles perfecto.
+*   **🎨 Interfaz Moderna y Responsiva:** Un tema oscuro profesional (`Phoenix`) que se adapta a cualquier tamaño de pantalla.
+*   **✂️ Edición de Parrilla Precisa:** Generación automática (por filas/columnas o tamaño de celda) y ajuste manual con *snap-to-grid*.
 *   **🎬 Gestor de Clips de Animación:** ¡La característica estrella! Crea y gestiona múltiples animaciones (ej. `correr`, `saltar`, `atacar`) desde una única hoja de sprites.
-*   **▶️ Previsualización en Vivo:** Visualiza tus animaciones al instante, con control de FPS para ajustar el *timing* a la perfección.
-*   **💾 Persistencia de Datos:**
-    *   **Sesión Automática:** Tu trabajo se guarda automáticamente en el Local Storage. Cierra el navegador y vuelve más tarde, ¡tu proyecto estará esperándote!
-    *   **Historial de Proyectos:** Accede a tus últimos 5 proyectos con miniaturas para cargarlos con un solo clic.
-*   **↩️ Deshacer y Rehacer:** No temas experimentar. Tienes un historial completo de cambios en la parrilla para deshacer y rehacer a tu antojo.
+*   **▶️ Previsualización en Vivo:** Visualiza tus animaciones al instante, con control de FPS para ajustar el *timing*.
+*   **💾 Persistencia de Datos:** Tu trabajo se guarda automáticamente en el Local Storage, con un historial de tus últimos 5 proyectos para cargarlos con un solo clic.
+*   **↩️ Deshacer y Rehacer:** Historial completo de cambios en la parrilla para experimentar sin miedo.
 *   **📤 Exportación Profesional:**
-    *   **Frames Individuales (ZIP):** Descarga todos los frames como imágenes PNG individuales en un archivo ZIP.
-    *   **GIF Animado:** Exporta el clip de animación actual como un GIF, con opciones de redimensionamiento para optimizar el tamaño.
-    *   **Código (HTML/CSS):** Genera una **página de demostración profesional y adaptable** con tu animación, incluyendo resaltado de sintaxis y una vista previa en vivo. ¡Perfecto para portafolios!
-    *   **Datos (JSON):** Exporta los datos de los frames y clips en formatos compatibles con motores de juego populares como **Phaser 3** y **Godot**.
+    *   **Frames Individuales (ZIP):** Descarga todos los frames como imágenes PNG.
+    *   **GIF Animado:** Exporta el clip actual como un GIF optimizado.
+    *   **Código (HTML/CSS):** Genera una página de demostración profesional y adaptable con tu animación, incluyendo resaltado de sintaxis y una vista previa en vivo.
+    *   **Datos (JSON):** Exporta los datos en formatos compatibles con **Phaser 3** y **Godot**.
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-Este proyecto es una demostración de lo que se puede lograr con tecnologías web modernas del lado del cliente, sin necesidad de un backend.
-
-*   **HTML5:** Estructura semántica y moderna.
-*   **CSS3:** Diseño avanzado con Flexbox, Grid, variables CSS para el tema y un enfoque totalmente responsivo.
-*   **JavaScript (ES6+):** Toda la lógica de la aplicación, manipulación del DOM, y gestión de estado.
-*   **Librerías Externas:**
-    *   **JSZip:** Para la creación de archivos `.zip` en el navegador.
-    *   **SortableJS:** Para la funcionalidad de arrastrar y soltar en la lista de frames.
-    *   **gif.js:** Para la codificación de GIFs animados.
+*   **HTML5**, **CSS3**, **JavaScript (ES6+)**
+*   **Librerías:** JSZip, SortableJS, gif.js
 
 ---
 
 ## 🚀 Cómo Empezar
 
-1.  **Abre el archivo `index.html`** en tu navegador web preferido (Chrome, Firefox, Edge, etc.).
-2.  **Arrastra y suelta** una imagen de hoja de sprites en la pantalla de bienvenida, o haz clic para seleccionarla desde tu disco.
-3.  **Define tu parrilla** usando las herramientas de generación automática o ajuste manual.
-4.  **Crea y gestiona tus clips de animación** en el panel lateral, seleccionando los frames que componen cada animación.
-5.  **Previsualiza y exporta** tu trabajo en el formato que necesites. ¡Así de fácil!
+1.  **Abre el archivo `index.html`** en tu navegador.
+2.  **Arrastra y suelta** una imagen de hoja de sprites en la pantalla de bienvenida.
+3.  **Define tu parrilla** y **crea tus clips de animación**.
+4.  **Previsualiza y exporta** tu trabajo. ¡Así de fácil!
 
 ---
 
 ## 🖼️ Archivos de Ejemplo
 
-Dentro de la carpeta `img-md/` encontrarás varias hojas de sprites listas para probar la herramienta:
+Dentro de la carpeta `img-md/` encontrarás varias hojas de sprites listas para probar la herramienta.
 
-*   `caminando per...`
-*   `hombre-camin...` (varias versiones)
-*   `hombre-cuchill...`
-*   `megaman.png`
-*   `tortuga.png`
-
-¡Úsalas para explorar todas las funcionalidades de la suite!
+| Vista Previa | Nombre del Archivo |
+| :---: | :--- |
+| ![Caminando en perspectiva](https://raw.githubusercontent.com/HectorDanielAyarachiFuentes/Herramienta-de-Corte-de-Sprite-Sheets/main/img-md/caminando%20perspectiva.jpg) | `caminando perspectiva.jpg` |
+| ![Hombre caminando 2](https://raw.githubusercontent.com/HectorDanielAyarachiFuentes/Herramienta-de-Corte-de-Sprite-Sheets/main/img-md/hombre-caminando-2.png) | `hombre-caminando-2.png` |
+| ![Hombre caminando](https://raw.githubusercontent.com/HectorDanielAyarachiFuentes/Herramienta-de-Corte-de-Sprite-Sheets/main/img-md/hombre-caminando.png) | `hombre-caminando.png` |
+| ![Hombre con cuchillo](https://raw.githubusercontent.com/HectorDanielAyarachiFuentes/Herramienta-de-Corte-de-Sprite-Sheets/main/img-md/hombre-cuchillo.png) | `hombre-cuchillo.png` |
+| ![Megaman](https://raw.githubusercontent.com/HectorDanielAyarachiFuentes/Herramienta-de-Corte-de-Sprite-Sheets/main/img-md/megaman.png) | `megaman.png` |
+| ![Tortuga](https://raw.githubusercontent.com/HectorDanielAyarachiFuentes/Herramienta-de-Corte-de-Sprite-Sheets/main/img-md/tortuga.png) | `tortuga.png` |
 
 ---
 
