@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Herramienta de Corte de Sprite Sheets</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+            background-color: #f0f2f5;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 800px;
+        }
+
+        .controls, .results {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .results {
+             min-width: 400px;
+             max-width: 400px;
+        }
+
+        h1, h2, h3 {
+            margin-top: 0;
+            color: #1c1e21;
+        }
+        
+        button {
+            background-color: #0866ff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+            margin-right: 10px;
+            margin-top: 5px;
+        }
+
+        button:hover {
+            background-color: #0655d4;
+        }
+
+        button.secondary {
+            background-color: #e4e6eb;
+            color: #4b4f56;
+        }
+        button.secondary:hover {
+            background-color: #d8dbdf;
+        }
+        
+        .editor-area {
+            display: grid;
+            grid-template-columns: 30px auto;
+            grid-template-rows: 30px auto;
+            width: fit-content;
+        }
+
+        .ruler-corner { background-color: #f0f2f5; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; }
+        #ruler-top { background-color: #f0f2f5; border-bottom: 1px solid #ccc; }
+        #ruler-left { background-color: #f0f2f5; border-right: 1px solid #ccc; }
+
+        #image-container {
+            grid-column: 2 / 3;
+            grid-row: 2 / 3;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #image-display { display: block; }
+        #measurement-canvas { position: absolute; top: 0; left: 0; z-index: 10; cursor: default; }
+        
+        #image-dimensions { background-color: #e4e6eb; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.95em; text-align: center; }
+
+        #json-output-container {
+            position: relative;
+        }
+        
+        #json-output {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre;
+            overflow-x: auto;
+            max-height: 300px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.85em;
+        }
+        
+        #copy-json-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            font-size: 0.8em;
+            background-color: #4a505c;
+        }
+
+        #frames-list {
+            list-style-type: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto;
+        }
+        
+        #frames-list li {
+            background-color: #f0f2f5; padding: 8px; border-radius: 4px; margin-bottom: 5px;
+            font-family: "Courier New", Courier, monospace; font-size: 0.9em; cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #frames-list li:hover, #frames-list li.highlight {
+            background-color: #d8e7ff; /* Azul claro para resaltar */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <h1>Herramienta de Corte de Sprite Sheets</h1>
+        
+        <div class="controls">
+            <h2>1. Carga tu Sprite Sheet</h2>
+            <input type="file" id="image-loader" accept="image/*">
+            <h2>2. Define la parrilla de corte</h2>
+            <p>Añade líneas horizontales y verticales. Los frames se detectarán automáticamente.</p>
+            <button id="add-h-line">Añadir Línea Horizontal</button>
+            <button id="add-v-line">Añadir Línea Vertical</button>
+            <button id="clear-button" class="secondary">Limpiar Todo</button>
+        </div>
+        
+        <div class="editor-area">
+            <div class="ruler-corner"></div>
+            <canvas id="ruler-top"></canvas>
+            <canvas id="ruler-left"></canvas>
+            <div id="image-container">
+                <img id="image-display" src="" alt="">
+                <canvas id="measurement-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="results">
+        <h2>3. Resultados</h2>
+        <p id="image-dimensions">Carga una imagen para empezar.</p>
+        
+        <h3>Datos de Frames (JSON)</h3>
+        <div id="json-output-container">
+            <pre><code id="json-output">Añade líneas para generar los frames.</code></pre>
+            <button id="copy-json-button">Copiar</button>
+        </div>
+
+        <h3>Lista de Frames</h3>
+        <ul id="frames-list"></ul>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ELEMENTOS DEL DOM ---
+            const imageLoader = document.getElementById('image-loader');
+            const imageDisplay = document.getElementById('image-display');
+            const canvas = document.getElementById('measurement-canvas'), ctx = canvas.getContext('2d');
+            const rulerTop = document.getElementById('ruler-top'), ctxTop = rulerTop.getContext('2d');
+            const rulerLeft = document.getElementById('ruler-left'), ctxLeft = rulerLeft.getContext('2d');
+            const imageDimensionsP = document.getElementById('image-dimensions');
+            const jsonOutput = document.getElementById('json-output');
+            const framesList = document.getElementById('frames-list');
+            const addHLineButton = document.getElementById('add-h-line'), addVLineButton = document.getElementById('add-v-line');
+            const clearButton = document.getElementById('clear-button'), copyJsonButton = document.getElementById('copy-json-button');
+            
+            // --- ESTADO DE LA APLICACIÓN ---
+            let lines = [], frames = [], selectedLine = null, hoveredFrame = null, isDragging = false;
+            let currentFileName = "spritesheet.png";
+            const RULER_SIZE = 30, HIT_TOLERANCE = 5;
+
+            // --- INICIALIZACIÓN Y CARGA DE IMAGEN ---
+            imageLoader.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    currentFileName = file.name;
+                    const reader = new FileReader();
+                    reader.onload = (event) => imageDisplay.src = event.target.result;
+                    reader.readAsDataURL(file);
+                    imageDimensionsP.textContent = 'Cargando...';
+                }
+            });
+            
+            imageDisplay.onload = () => {
+                const imgWidth = imageDisplay.naturalWidth, imgHeight = imageDisplay.naturalHeight;
+                canvas.width = rulerTop.width = imgWidth;
+                canvas.height = rulerLeft.height = imgHeight;
+                rulerTop.height = rulerLeft.width = RULER_SIZE;
+                imageDimensionsP.innerHTML = `<strong>${currentFileName}:</strong> ${imgWidth}px &times; ${imgHeight}px`;
+                clearAll();
+            };
+
+            // --- LÓGICA PRINCIPAL ---
+            const updateAll = () => {
+                calculateFrames();
+                drawAll();
+                updateResults();
+            };
+
+            const calculateFrames = () => {
+                frames = [];
+                const hPositions = [0, ...lines.filter(l => l.type === 'horizontal').map(l => l.position).sort((a,b)=>a-b), canvas.height];
+                const vPositions = [0, ...lines.filter(l => l.type === 'vertical').map(l => l.position).sort((a,b)=>a-b), canvas.width];
+                
+                let frameId = 0;
+                for (let i = 0; i < hPositions.length - 1; i++) {
+                    for (let j = 0; j < vPositions.length - 1; j++) {
+                        const x = vPositions[j], y = hPositions[i];
+                        const w = vPositions[j+1] - x, h = hPositions[i+1] - y;
+                        if (w > 0 && h > 0) {
+                            frames.push({ id: frameId++, rect: { x, y, w, h } });
+                        }
+                    }
+                }
+            };
+
+            // --- FUNCIONES DE DIBUJO ---
+            const drawAll = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawFrames();
+                drawLines();
+                drawRulers();
+            };
+
+            const drawFrames = () => {
+                frames.forEach(frame => {
+                    const { x, y, w, h } = frame.rect;
+                    ctx.fillStyle = 'rgba(8, 102, 255, 0.15)';
+                    ctx.fillRect(x, y, w, h);
+                    ctx.strokeStyle = 'rgba(8, 102, 255, 0.4)';
+                    ctx.strokeRect(x, y, w, h);
+
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.font = '12px Arial';
+                    ctx.fillText(frame.id, x + 4, y + 14);
+                });
+                
+                if (hoveredFrame) {
+                    const { x, y, w, h } = hoveredFrame.rect;
+                    ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+                    ctx.fillRect(x, y, w, h);
+                }
+            };
+
+            const drawLines = () => {
+                lines.forEach(line => {
+                    ctx.beginPath();
+                    const isSelected = selectedLine && selectedLine.id === line.id;
+                    ctx.strokeStyle = isSelected ? 'rgba(255, 0, 0, 1)' : 'rgba(8, 102, 255, 0.9)';
+                    ctx.lineWidth = isSelected ? 3 : 2;
+                    if (line.type === 'horizontal') {
+                        ctx.moveTo(0, line.position); ctx.lineTo(canvas.width, line.position);
+                    } else {
+                        ctx.moveTo(line.position, 0); ctx.lineTo(line.position, canvas.height);
+                    }
+                    ctx.stroke();
+                });
+            };
+            
+            const drawRulers = () => {
+                ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height); ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);
+                if (!imageDisplay.src) return;
+                ctxTop.font=ctxLeft.font='10px Arial'; ctxTop.fillStyle=ctxLeft.fillStyle='#333';
+                for (let x=0; x<canvas.width; x+=10) { ctxTop.beginPath(); ctxTop.moveTo(x, x%50===0?15:22); ctxTop.lineTo(x, RULER_SIZE); ctxTop.stroke(); if(x%50===0) ctxTop.fillText(x, x+2, 12); }
+                for (let y=0; y<canvas.height; y+=10) { ctxLeft.beginPath(); ctxLeft.moveTo(y%50===0?15:22, y); ctxLeft.lineTo(RULER_SIZE, y); ctxLeft.stroke(); if(y%50===0) ctxLeft.fillText(y, 4, y-2); }
+            };
+
+            // --- ACTUALIZACIÓN DE RESULTADOS ---
+            const updateResults = () => {
+                // Generar y mostrar JSON
+                const outputData = {
+                    meta: { image: currentFileName, width: canvas.width, height: canvas.height },
+                    frames: frames.map(f => ({ id: f.id, rect: {
+                        x: Math.round(f.rect.x), y: Math.round(f.rect.y), w: Math.round(f.rect.w), h: Math.round(f.rect.h)
+                    }}))
+                };
+                jsonOutput.textContent = JSON.stringify(outputData, null, 2);
+
+                // Generar lista interactiva de frames
+                framesList.innerHTML = '';
+                frames.forEach(frame => {
+                    const li = document.createElement('li');
+                    li.dataset.frameId = frame.id;
+                    li.textContent = `Frame ${frame.id}: x=${Math.round(frame.rect.x)}, y=${Math.round(frame.rect.y)}, w=${Math.round(frame.rect.w)}, h=${Math.round(frame.rect.h)}`;
+                    
+                    li.addEventListener('mouseover', () => highlightFrame(frame.id, true));
+                    li.addEventListener('mouseout', () => highlightFrame(frame.id, false));
+
+                    framesList.appendChild(li);
+                });
+            };
+            
+            const highlightFrame = (id, isHighlighted) => {
+                hoveredFrame = isHighlighted ? frames.find(f => f.id === id) : null;
+                document.querySelectorAll('#frames-list li').forEach(li => {
+                    li.classList.toggle('highlight', isHighlighted && parseInt(li.dataset.frameId) === id);
+                });
+                drawAll();
+            };
+
+            // --- EVENTOS DE INTERACCIÓN ---
+            addHLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'horizontal', position: canvas.height / 2 }); updateAll(); }});
+            addVLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'vertical', position: canvas.width / 2 }); updateAll(); }});
+            clearButton.addEventListener('click', clearAll);
+
+            copyJsonButton.addEventListener('click', () => {
+                navigator.clipboard.writeText(jsonOutput.textContent).then(() => {
+                    copyJsonButton.textContent = '¡Copiado!';
+                    setTimeout(() => copyJsonButton.textContent = 'Copiar', 2000);
+                });
+            });
+
+            const getMousePos = (e) => ({ x: (e.clientX - canvas.getBoundingClientRect().left) * (canvas.width/canvas.clientWidth), y: (e.clientY - canvas.getBoundingClientRect().top) * (canvas.height/canvas.clientHeight) });
+            const getLineAtPosition = (pos) => lines.find(l => (l.type === 'horizontal' && Math.abs(pos.y - l.position) < HIT_TOLERANCE) || (l.type === 'vertical' && Math.abs(pos.x - l.position) < HIT_TOLERANCE)) || null;
+
+            canvas.addEventListener('mousedown', (e) => { if(imageDisplay.src){ selectedLine = getLineAtPosition(getMousePos(e)); if(selectedLine) isDragging = true; drawAll(); }});
+            canvas.addEventListener('mouseup', () => { if(isDragging){ isDragging = false; selectedLine = null; updateAll(); }});
+            canvas.addEventListener('mouseleave', () => { if(isDragging){ isDragging = false; selectedLine = null; updateAll(); }});
+
+            canvas.addEventListener('mousemove', (e) => {
+                const pos = getMousePos(e);
+                if (isDragging && selectedLine) {
+                    if (selectedLine.type === 'horizontal') selectedLine.position = pos.y; else selectedLine.position = pos.x;
+                    updateAll();
+                } else {
+                    const lineUnderMouse = getLineAtPosition(pos);
+                    canvas.style.cursor = lineUnderMouse ? (lineUnderMouse.type === 'horizontal' ? 'row-resize' : 'col-resize') : 'default';
+                    highlightFrame(frames.find(f => pos.x >= f.rect.x && pos.x <= f.rect.x + f.rect.w && pos.y >= f.rect.y && pos.y <= f.rect.y + f.rect.h)?.id, true);
+                }
+            });
+
+            function clearAll() {
+                lines = [];
+                updateAll();
+            }
+        });
+    </script>
+</body>
+</html>
