@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprite Sheet Suite v3.7 "Phoenix"</title>
+    <title>Sprite Sheet Suite v3.8 "Phoenix"</title>
     <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -225,7 +225,7 @@
 
         /* --- Footer --- */
         .app-footer {
-            display: none; /* Oculto por defecto */
+            display: none;
             width: 100%;
             max-width: 1600px;
             text-align: center;
@@ -236,7 +236,7 @@
             font-size: 0.9em;
         }
         body.app-loaded .app-footer {
-            display: block; /* Se muestra cuando la app está cargada */
+            display: block;
         }
         .app-footer p {
             margin: 0;
@@ -266,7 +266,7 @@
 
     <div id="welcome-screen">
         <div id="drop-zone">
-            <h2>Sprite Sheet Suite v3.7</h2>
+            <h2>Sprite Sheet Suite v3.8</h2>
             <p>Arrastra y suelta tu imagen aquí</p>
             <p>o</p>
             <label for="image-loader" id="image-loader-label">Selecciona un archivo</label>
@@ -277,7 +277,7 @@
     <div class="app-container" style="visibility: hidden;">
         <div class="main-panel">
             <div class="panel">
-                <h1>Sprite Sheet Suite <span class="version">v3.7 Phoenix</span></h1>
+                <h1>Sprite Sheet Suite <span class="version">v3.8 Phoenix</span></h1>
                 <p id="image-dimensions">Carga una imagen para empezar.</p>
             </div>
             <div class="panel">
@@ -341,9 +341,6 @@
                 </div>
                 <h3>Frames del Clip</h3>
                 <p class="help-text">Selecciona los frames para incluirlos en la animación.</p>
-                <!-- ================================================== -->
-                <!-- === BOTONES DE SELECCIÓN AÑADIDOS AQUÍ =========== -->
-                <!-- ================================================== -->
                 <div class="input-group" style="margin-bottom: 10px;">
                     <button id="select-all-frames" class="small-action">Todos</button>
                     <button id="deselect-all-frames" class="small-action">Ninguno</button>
@@ -579,7 +576,7 @@
             welcomeScreen.style.opacity = '0';
             setTimeout(() => welcomeScreen.style.display = 'none', 300);
             appContainer.style.visibility = 'visible';
-            document.body.classList.add('app-loaded'); // Show footer
+            document.body.classList.add('app-loaded');
 
             const imgWidth = imageDisplay.naturalWidth, imgHeight = imageDisplay.naturalHeight;
             canvas.width = rulerTop.width = imgWidth;
@@ -977,6 +974,14 @@
             const frameCount = animFrames.length;
             const duration = ((1 / animationState.fps) * frameCount).toFixed(2);
 
+            // --- Lógica de Escenario Dinámico ---
+            const maxWidth = Math.max(...animFrames.map(f => f.rect.w));
+            const maxHeight = Math.max(...animFrames.map(f => f.rect.h));
+            const scale = 2; // El factor de escala que usamos en el CSS
+            const stagePadding = 80; // Espacio extra alrededor del sprite escalado
+            const stageWidth = Math.round((maxWidth * scale) + stagePadding);
+            const stageHeight = Math.round((maxHeight * scale) + stagePadding);
+
             const htmlCode = `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -994,11 +999,10 @@
 </html>`;
 
             let keyframesSteps = animFrames.map((frame, index) => {
-                const { x, y } = frame.rect;
+                const { x, y, w, h } = frame.rect;
                 const percentage = (index / frameCount) * 100;
-                return `    ${percentage.toFixed(2)}% { background-position: -${x}px -${y}px; }`;
+                return `    ${percentage.toFixed(2)}% { width: ${w}px; height: ${h}px; background-position: -${x}px -${y}px; }`;
             }).join('\n');
-            keyframesSteps += `\n    100% { background-position: -${animFrames[0].rect.x}px -${animFrames[0].rect.y}px; }`;
 
             const cssCode = `/* Estilos generales para la página de demostración */
 body {
@@ -1013,10 +1017,10 @@ body {
     margin: 0;
 }
 
-/* El "escenario" donde ocurre la animación */
+/* El "escenario" donde ocurre la animación (tamaño dinámico) */
 .stage {
-    width: 350px;
-    height: 300px;
+    width: ${stageWidth}px;
+    height: ${stageHeight}px;
     background-color: #1a252f;
     border: 2px solid #55687a;
     display: flex;
@@ -1028,6 +1032,7 @@ body {
 
 /* El contenedor del sprite con la animación */
 .sprite-container {
+    /* Las dimensiones iniciales se basan en el primer frame */
     width: ${firstFrame.w}px;
     height: ${firstFrame.h}px;
     background-image: url('${currentFileName}');
@@ -1037,7 +1042,7 @@ body {
     image-rendering: crisp-edges;
 
     /* Aumenta el tamaño del sprite para mejor visibilidad */
-    transform: scale(2);
+    transform: scale(${scale});
     transform-origin: bottom center;
 
     /* La animación principal */
