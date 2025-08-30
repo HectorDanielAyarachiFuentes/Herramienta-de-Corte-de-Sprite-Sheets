@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suite de Herramientas para Sprite Sheets</title>
-    <!-- Librería JSZip para crear archivos .zip en el navegador -->
+    <title>Suite de Herramientas para Sprite Sheets (Versión Mejorada)</title>
+    <!-- Librería JSZip para crear archivos .zip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Librería SortableJS para reordenar listas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <!-- Librería gif.js para crear GIFs animados -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -16,7 +20,7 @@
             display: flex; flex-direction: column; gap: 20px;
         }
         .main-container { max-width: 800px; }
-        .results-container { min-width: 400px; max-width: 400px; }
+        .results-container { min-width: 420px; max-width: 420px; }
 
         .controls, .results, .generator, .preview, .code-export {
             background-color: white; padding: 20px; border-radius: 8px;
@@ -35,17 +39,20 @@
         button.secondary:hover { background-color: #d8dbdf; }
         button.success { background-color: #31a24c; }
         button.success:hover { background-color: #2b8a41; }
+        button.warning { background-color: #f7b928; color: #1c1e21; }
+        button.warning:hover { background-color: #e2a823; }
 
         /* --- Generador de Parrilla --- */
-        .generator fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 10px; }
+        .generator fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 10px; margin-bottom: 10px; }
         .generator legend { font-weight: 600; padding: 0 5px; }
         .generator .input-group { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
         .generator input[type="number"] { width: 60px; padding: 5px; }
+        .generator .checkbox-group { display: flex; align-items: center; gap: 5px; font-size: 0.9em; }
 
         /* --- Previsualización de Animación --- */
         .preview-area { text-align: center; }
         #preview-canvas { background-color: #e9ebee; border: 1px solid #ccc; margin-bottom: 10px; image-rendering: pixelated; image-rendering: crisp-edges; }
-        .preview-controls { display: flex; justify-content: center; align-items: center; gap: 15px; }
+        .preview-controls { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
         
         .editor-area { display: grid; grid-template-columns: 30px auto; grid-template-rows: 30px auto; width: fit-content; max-width: 100%; overflow: auto; }
         .ruler-corner { background-color: #f0f2f5; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; }
@@ -59,15 +66,21 @@
         .code-container { position: relative; margin-top: 10px; }
         .code-container pre, #json-output { background-color: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; max-height: 200px; font-family: "Courier New", Courier, monospace; font-size: 0.85em; }
         .copy-button { position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em; background-color: #4a505c; }
-        #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
-        #frames-list li { background-color: #f0f2f5; padding: 8px; border-radius: 4px; margin-bottom: 5px; font-family: "Courier New", Courier, monospace; font-size: 0.9em; cursor: pointer; transition: background-color 0.2s; }
+        
+        /* --- Lista de Frames Mejorada --- */
+        #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; }
+        #frames-list li { display: flex; align-items: center; gap: 8px; background-color: #f0f2f5; padding: 8px; border-bottom: 1px solid #ddd; font-family: "Courier New", Courier, monospace; font-size: 0.9em; cursor: grab; transition: background-color 0.2s; }
+        #frames-list li:last-child { border-bottom: none; }
         #frames-list li:hover, #frames-list li.highlight { background-color: #d8e7ff; }
+        #frames-list li .frame-info { flex-grow: 1; }
+        #frames-list li .frame-name-input { display: none; width: 100px; }
+        #frames-list li .drag-handle { cursor: grab; color: #888; padding-right: 5px; }
     </style>
 </head>
 <body>
 
     <div class="main-container">
-        <h1>Suite de Herramientas para Sprite Sheets</h1>
+        <h1>Suite de Herramientas para Sprite Sheets (v2)</h1>
         
         <div class="controls">
             <h2>1. Carga tu Sprite Sheet</h2>
@@ -83,13 +96,22 @@
                     <label>Columnas:</label><input type="number" id="cols-input" value="5" min="1">
                 </div>
                 <button id="generate-grid-button" disabled>Generar por Filas/Columnas</button>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
+                <div class="input-group">
+                    <label>Ancho Celda:</label><input type="number" id="cell-w-input" value="64" min="1">
+                    <label>Alto Celda:</label><input type="number" id="cell-h-input" value="64" min="1">
+                </div>
+                <button id="generate-by-size-button" disabled>Generar por Tamaño de Celda</button>
             </fieldset>
             <fieldset>
                 <legend>Ajuste Manual</legend>
-                <p>Añade o arrastra líneas para refinar la parrilla.</p>
+                <p>Añade, arrastra o haz doble clic en una línea para eliminarla.</p>
                 <button id="add-h-line" disabled>Añadir Línea Horizontal</button>
                 <button id="add-v-line" disabled>Añadir Línea Vertical</button>
                 <button id="clear-button" class="secondary" disabled>Limpiar Todo</button>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="snap-checkbox"><label for="snap-checkbox">Ajustar a la parrilla (10px)</label>
+                </div>
             </fieldset>
         </div>
         
@@ -107,6 +129,7 @@
             <h2>3. Resultados y Exportación</h2>
             <p id="image-dimensions">Carga una imagen para empezar.</p>
             <button id="export-zip-button" disabled>Descargar Frames (ZIP)</button>
+            <button id="export-gif-button" class="warning" disabled>Descargar GIF Animado</button>
         </div>
 
         <div class="preview">
@@ -114,7 +137,11 @@
             <div class="preview-area">
                 <canvas id="preview-canvas" width="150" height="150"></canvas>
                 <div class="preview-controls">
+                    <button id="first-frame-button" disabled>⏮️</button>
                     <button id="play-pause-button" disabled>▶️ Play</button>
+                    <button id="last-frame-button" disabled>⏭️</button>
+                </div>
+                 <div class="preview-controls" style="margin-top: 10px;">
                     <label for="fps-slider">FPS: <span id="fps-value">12</span></label>
                     <input type="range" id="fps-slider" min="1" max="60" value="12" style="width: 150px;" disabled>
                 </div>
@@ -141,11 +168,20 @@
 
         <div class="results">
             <h3>Datos de Frames (JSON)</h3>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <label for="json-format-select">Formato:</label>
+                <select id="json-format-select" style="padding: 5px;">
+                    <option value="default">Por Defecto</option>
+                    <option value="phaser3">Phaser 3 (JSON Hash)</option>
+                    <option value="godot">Godot (SpriteFrames)</option>
+                </select>
+            </div>
             <div class="code-container">
                 <pre><code id="json-output"></code></pre>
                 <button id="copy-json-button" class="copy-button">Copiar</button>
             </div>
             <h3>Lista de Frames</h3>
+            <p style="font-size: 0.8em; margin-top: 0;">Arrastra para reordenar. Doble clic para renombrar.</p>
             <ul id="frames-list"></ul>
         </div>
     </div>
@@ -160,14 +196,21 @@
             const rulerLeft = document.getElementById('ruler-left'), ctxLeft = rulerLeft.getContext('2d');
             const imageDimensionsP = document.getElementById('image-dimensions');
             const jsonOutput = document.getElementById('json-output');
+            const jsonFormatSelect = document.getElementById('json-format-select');
             const framesList = document.getElementById('frames-list');
             const rowsInput = document.getElementById('rows-input'), colsInput = document.getElementById('cols-input');
+            const cellWInput = document.getElementById('cell-w-input'), cellHInput = document.getElementById('cell-h-input');
             const generateGridButton = document.getElementById('generate-grid-button');
+            const generateBySizeButton = document.getElementById('generate-by-size-button');
             const addHLineButton = document.getElementById('add-h-line'), addVLineButton = document.getElementById('add-v-line');
             const clearButton = document.getElementById('clear-button'), copyJsonButton = document.getElementById('copy-json-button');
+            const snapCheckbox = document.getElementById('snap-checkbox');
             const exportZipButton = document.getElementById('export-zip-button');
+            const exportGifButton = document.getElementById('export-gif-button');
             const previewCanvas = document.getElementById('preview-canvas'), previewCtx = previewCanvas.getContext('2d');
             const playPauseButton = document.getElementById('play-pause-button');
+            const firstFrameButton = document.getElementById('first-frame-button');
+            const lastFrameButton = document.getElementById('last-frame-button');
             const fpsSlider = document.getElementById('fps-slider'), fpsValue = document.getElementById('fps-value');
             const exportCodeButton = document.getElementById('export-code-button');
             const codeOutputArea = document.getElementById('code-output-area');
@@ -175,29 +218,34 @@
             const cssCodeOutput = document.getElementById('css-code-output');
             const copyHtmlButton = document.getElementById('copy-html-button');
             const copyCssButton = document.getElementById('copy-css-button');
-            const allButtons = document.querySelectorAll('button, input[type="range"]');
+            const allButtons = document.querySelectorAll('button, input, select');
 
             // --- App State ---
-            let lines = [], frames = [], selectedLine = null, hoveredFrame = null, isDragging = false;
+            let lines = [], frames = [], selectedLine = null, hoveredLine = null, hoveredFrame = null, isDragging = false;
             let currentFileName = "spritesheet.png";
-            let animationState = { isPlaying: false, fps: 12, currentFrame: 0, lastTime: 0, animationFrameId: null };
+            let animationState = { isPlaying: false, fps: 12, currentFrameIndex: 0, lastTime: 0, animationFrameId: null };
+            const SNAP_VALUE = 10;
             
             // --- Initialization & Image Loading ---
             const setControlsEnabled = (enabled) => {
-                allButtons.forEach(btn => { if (btn.id !== 'image-loader') btn.disabled = !enabled; });
+                allButtons.forEach(el => { if (el.id !== 'image-loader') el.disabled = !enabled; });
                 if(!enabled) { codeOutputArea.style.display = 'none'; }
             };
             setControlsEnabled(false);
 
             imageLoader.addEventListener('change', (e) => {
                 const file = e.target.files[0];
-                if (file) {
-                    currentFileName = file.name;
-                    const reader = new FileReader();
-                    reader.onload = (event) => imageDisplay.src = event.target.result;
-                    reader.readAsDataURL(file);
-                    imageDimensionsP.textContent = 'Cargando...';
+                if (!file) return;
+                if (!file.type.startsWith('image/')) {
+                    alert('Por favor, selecciona un archivo de imagen válido.');
+                    imageLoader.value = '';
+                    return;
                 }
+                currentFileName = file.name;
+                const reader = new FileReader();
+                reader.onload = (event) => imageDisplay.src = event.target.result;
+                reader.readAsDataURL(file);
+                imageDimensionsP.textContent = 'Cargando...';
             });
             
             imageDisplay.onload = () => {
@@ -206,7 +254,7 @@
                 canvas.height = rulerLeft.height = imgHeight;
                 rulerTop.height = rulerLeft.width = 30;
                 imageDimensionsP.innerHTML = `<strong>${currentFileName}:</strong> ${imgWidth}px &times; ${imgHeight}px`;
-                clearAll(); // Limpia el estado anterior
+                clearAll();
                 setControlsEnabled(true);
             };
 
@@ -220,6 +268,7 @@
             };
 
             const calculateFrames = () => {
+                const oldFrames = new Map(frames.map(f => [f.id, f]));
                 frames = [];
                 const hPositions = [0, ...lines.filter(l => l.type === 'horizontal').map(l => l.position).sort((a,b)=>a-b), canvas.height];
                 const vPositions = [0, ...lines.filter(l => l.type === 'vertical').map(l => l.position).sort((a,b)=>a-b), canvas.width];
@@ -230,7 +279,13 @@
                         const x = vPositions[j], y = hPositions[i];
                         const w = vPositions[j+1] - x, h = hPositions[i+1] - y;
                         if (w > 1 && h > 1) {
-                            frames.push({ id: frameId++, rect: { x:Math.round(x), y:Math.round(y), w:Math.round(w), h:Math.round(h) } });
+                            const id = frameId++;
+                            const oldFrame = oldFrames.get(id);
+                            frames.push({ 
+                                id: id, 
+                                name: oldFrame ? oldFrame.name : `frame_${id}`,
+                                rect: { x:Math.round(x), y:Math.round(y), w:Math.round(w), h:Math.round(h) } 
+                            });
                         }
                     }
                 }
@@ -246,35 +301,172 @@
                 updateAll();
             });
 
-            // ==========================================================
-            // --- TODAS LAS FUNCIONES DE ABAJO HAN SIDO RESTAURADAS ---
-            // ==========================================================
+            generateBySizeButton.addEventListener('click', () => {
+                const cellW = parseInt(cellWInput.value); const cellH = parseInt(cellHInput.value);
+                if (isNaN(cellW) || isNaN(cellH) || cellW < 1 || cellH < 1) return;
+                lines = [];
+                for (let y = cellH; y < canvas.height; y += cellH) lines.push({ id: Date.now() + y, type: 'horizontal', position: y });
+                for (let x = cellW; x < canvas.width; x += cellW) lines.push({ id: Date.now() + x + canvas.height, type: 'vertical', position: x });
+                updateAll();
+            });
+
+            // --- Drawing ---
+            const drawAll = (mousePos = null) => {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                // Draw frames
+                frames.forEach(f => {
+                    const {x,y,w,h} = f.rect;
+                    ctx.fillStyle = (hoveredFrame && hoveredFrame.id === f.id) ? 'rgba(0, 255, 0, 0.3)' : 'rgba(8, 102, 255, 0.15)';
+                    ctx.fillRect(x,y,w,h);
+                    ctx.strokeStyle='rgba(8, 102, 255, 0.4)'; ctx.strokeRect(x,y,w,h);
+                    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='12px Arial'; ctx.fillText(f.id, x+4, y+14);
+                });
+                // Draw lines
+                lines.forEach(l => {
+                    ctx.beginPath();
+                    const isSel = selectedLine && selectedLine.id === l.id;
+                    const isHov = hoveredLine && hoveredLine.id === l.id;
+                    ctx.strokeStyle = isSel ? '#ff0000' : (isHov ? '#f7b928' : '#0866ff');
+                    ctx.lineWidth = isSel ? 3 : 2;
+                    if(l.type==='horizontal'){ ctx.moveTo(0,l.position); ctx.lineTo(canvas.width,l.position); }
+                    else { ctx.moveTo(l.position,0); ctx.lineTo(l.position,canvas.height); }
+                    ctx.stroke();
+                });
+                // Draw mouse coordinates
+                if (mousePos) {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.fillRect(mousePos.x + 10, mousePos.y + 10, 70, 20);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '10px Arial';
+                    ctx.fillText(`X:${Math.round(mousePos.x)}, Y:${Math.round(mousePos.y)}`, mousePos.x + 15, mousePos.y + 23);
+                }
+                drawRulers();
+            };
+
+            const drawRulers=()=>{ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height);ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);if(!imageDisplay.src||!imageDisplay.complete)return;ctxTop.font=ctxLeft.font='10px Arial';ctxTop.fillStyle=ctxLeft.fillStyle='#333';for(let x=0;x<canvas.width;x+=10){ctxTop.beginPath();ctxTop.moveTo(x,x%50===0?15:22);ctxTop.lineTo(x,30);ctxTop.stroke();if(x%50===0)ctxTop.fillText(x,x+2,12)}for(let y=0;y<canvas.height;y+=10){ctxLeft.beginPath();ctxLeft.moveTo(y%50===0?15:22,y);ctxLeft.lineTo(30,y);ctxLeft.stroke();if(y%50===0)ctxLeft.fillText(y,4,y-2)}};
+            
+            // --- Results & UI Update ---
+            const updateResults=()=>{
+                updateJsonOutput();
+                framesList.innerHTML='';
+                frames.forEach(f=>{
+                    const li=document.createElement('li');
+                    li.dataset.frameId=f.id;
+                    li.innerHTML = `
+                        <span class="drag-handle">☰</span>
+                        <input type="checkbox" class="frame-checkbox" data-frame-id="${f.id}" checked>
+                        <span class="frame-info">F${f.id}: ${f.name}</span>
+                        <input type="text" class="frame-name-input" value="${f.name}" data-frame-id="${f.id}">
+                        <span class="frame-dims">${f.rect.w}x${f.rect.h}</span>
+                    `;
+                    li.addEventListener('mouseover',()=>{highlightFrame(f.id,true)});
+                    li.addEventListener('mouseout',()=>{highlightFrame(f.id,false)});
+                    framesList.appendChild(li);
+                });
+                // Init SortableJS
+                new Sortable(framesList, {
+                    animation: 150,
+                    handle: '.drag-handle',
+                    onEnd: (evt) => {
+                        const newOrder = Array.from(evt.to.children).map(li => parseInt(li.dataset.frameId));
+                        frames.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id));
+                        updateAll();
+                    }
+                });
+            };
+
+            const updateJsonOutput = () => {
+                const format = jsonFormatSelect.value;
+                let outputObject;
+                const framesData = frames.map(f => ({
+                    name: f.name,
+                    id: f.id,
+                    rect: { x: f.rect.x, y: f.rect.y, w: f.rect.w, h: f.rect.h }
+                }));
+
+                switch(format) {
+                    case 'phaser3':
+                        outputObject = {
+                            frames: framesData.reduce((acc, f) => {
+                                acc[f.name] = {
+                                    frame: { x: f.rect.x, y: f.rect.y, w: f.rect.w, h: f.rect.h },
+                                    spriteSourceSize: { x: 0, y: 0, w: f.rect.w, h: f.rect.h },
+                                    sourceSize: { w: f.rect.w, h: f.rect.h }
+                                };
+                                return acc;
+                            }, {}),
+                            meta: { image: currentFileName, format: 'RGBA8888', size: { w: canvas.width, h: canvas.height }, scale: 1 }
+                        };
+                        break;
+                    case 'godot':
+                        outputObject = {
+                            "frames": framesData.reduce((acc, f) => {
+                                acc[f.name] = {
+                                    "frame": { "x": f.rect.x, "y": f.rect.y, "w": f.rect.w, "h": f.rect.h },
+                                    "source_size": { "w": f.rect.w, "h": f.rect.h },
+                                    "sprite_source_size": { "x": 0, "y": 0, "w": f.rect.w, "h": f.rect.h }
+                                };
+                                return acc;
+                            }, {}),
+                            "meta": { "app": "Sprite Sheet Tool", "version": "2.0", "image": currentFileName, "format": "RGBA8888", "size": { "w": canvas.width, "h": canvas.height } }
+                        };
+                        break;
+                    default:
+                        outputObject = {
+                            meta: { image: currentFileName, width: canvas.width, height: canvas.height },
+                            frames: framesData
+                        };
+                        break;
+                }
+                jsonOutput.textContent = JSON.stringify(outputObject, null, 2);
+            };
+
+            const highlightFrame=(id,isHighlighted)=>{
+                hoveredFrame=isHighlighted?frames.find(f=>f.id===id):null;
+                const li = document.querySelector(`#frames-list li[data-frame-id="${id}"]`);
+                if (li) {
+                    li.classList.toggle('highlight', isHighlighted);
+                    if (isHighlighted) {
+                        li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+                drawAll();
+            };
+            
+            function clearAll() { lines = []; frames = []; updateAll(); }
+
+            // --- Animation Logic ---
+            const getAnimationFrames = () => {
+                const checkedIds = Array.from(document.querySelectorAll('.frame-checkbox:checked')).map(cb => parseInt(cb.dataset.frameId));
+                return frames.filter(f => checkedIds.includes(f.id));
+            };
+
             const animationLoop = (timestamp) => {
                 if (!animationState.isPlaying) return;
                 
                 const elapsed = timestamp - animationState.lastTime;
-                if (elapsed > 1000 / animationState.fps) {
+                const animFrames = getAnimationFrames();
+                if (elapsed > 1000 / animationState.fps && animFrames.length > 0) {
                     animationState.lastTime = timestamp;
-                    if (frames.length > 0) {
-                        const frame = frames[animationState.currentFrame];
-                        const { x, y, w, h } = frame.rect;
-                        const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
-                        const drawW = w * scale; const drawH = h * scale;
-                        const drawX = (previewCanvas.width - drawW) / 2;
-                        const drawY = (previewCanvas.height - drawH) / 2;
-                        
-                        previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                        previewCtx.drawImage(imageDisplay, x, y, w, h, drawX, drawY, drawW, drawH);
-                        
-                        animationState.currentFrame = (animationState.currentFrame + 1) % frames.length;
-                    }
+                    const frame = animFrames[animationState.currentFrameIndex];
+                    const { x, y, w, h } = frame.rect;
+                    const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
+                    const drawW = w * scale; const drawH = h * scale;
+                    const drawX = (previewCanvas.width - drawW) / 2;
+                    const drawY = (previewCanvas.height - drawH) / 2;
+                    
+                    previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                    previewCtx.drawImage(imageDisplay, x, y, w, h, drawX, drawY, drawW, drawH);
+                    
+                    animationState.currentFrameIndex = (animationState.currentFrameIndex + 1) % animFrames.length;
                 }
                 animationState.animationFrameId = requestAnimationFrame(animationLoop);
             };
 
             const toggleAnimation = () => {
                 animationState.isPlaying = !animationState.isPlaying;
-                if (animationState.isPlaying && frames.length > 0) {
+                const animFrames = getAnimationFrames();
+                if (animationState.isPlaying && animFrames.length > 0) {
                     playPauseButton.textContent = '⏸️ Pausa';
                     animationState.lastTime = performance.now();
                     animationLoop(animationState.lastTime);
@@ -285,16 +477,24 @@
             };
 
             const resetAnimation = () => {
-                if (animationState.isPlaying) toggleAnimation(); // Stop if playing
-                animationState.currentFrame = 0;
+                if (animationState.isPlaying) toggleAnimation();
+                animationState.currentFrameIndex = 0;
                 previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
-                if (frames.length > 0) {
-                    const { x, y, w, h } = frames[0].rect;
-                    const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
-                    previewCtx.drawImage(imageDisplay, x, y, w, h, (previewCanvas.width - w * scale)/2, (previewCanvas.height - h * scale)/2, w*scale, h*scale);
+                const animFrames = getAnimationFrames();
+                if (animFrames.length > 0) {
+                    drawFrameInPreview(animFrames[0]);
                 }
             };
-            
+
+            const drawFrameInPreview = (frame) => {
+                if (!frame) return;
+                const { x, y, w, h } = frame.rect;
+                const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                previewCtx.drawImage(imageDisplay, x, y, w, h, (previewCanvas.width - w * scale)/2, (previewCanvas.height - h * scale)/2, w*scale, h*scale);
+            };
+
+            // --- Export Logic ---
             exportZipButton.addEventListener('click', async () => {
                 if (frames.length === 0) return;
                 exportZipButton.textContent = 'Generando...';
@@ -310,7 +510,7 @@
                     tempCtx.drawImage(imageDisplay, x, y, w, h, 0, 0, w, h);
                     return new Promise(resolve => {
                         tempCanvas.toBlob(blob => {
-                            zip.file(`${currentFileName.split('.')[0]}_${frame.id}.png`, blob);
+                            zip.file(`${frame.name}.png`, blob);
                             resolve();
                         });
                     });
@@ -330,72 +530,133 @@
                 exportZipButton.disabled = false;
             });
 
-            const drawAll = () => {
-                ctx.clearRect(0,0,canvas.width,canvas.height);
-                frames.forEach(f => {
-                    const {x,y,w,h} = f.rect;
-                    ctx.fillStyle = (hoveredFrame && hoveredFrame.id === f.id) ? 'rgba(0, 255, 0, 0.3)' : 'rgba(8, 102, 255, 0.15)';
-                    ctx.fillRect(x,y,w,h);
-                    ctx.strokeStyle='rgba(8, 102, 255, 0.4)'; ctx.strokeRect(x,y,w,h);
-                    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='12px Arial'; ctx.fillText(f.id, x+4, y+14);
-                });
-                lines.forEach(l => {
-                    ctx.beginPath();
-                    const isSel = selectedLine && selectedLine.id === l.id;
-                    ctx.strokeStyle = isSel ? '#ff0000' : '#0866ff'; ctx.lineWidth = isSel ? 3:2;
-                    if(l.type==='horizontal'){ ctx.moveTo(0,l.position); ctx.lineTo(canvas.width,l.position); }
-                    else { ctx.moveTo(l.position,0); ctx.lineTo(l.position,canvas.height); }
-                    ctx.stroke();
-                });
-                drawRulers();
-            };
+            exportGifButton.addEventListener('click', () => {
+                const animFrames = getAnimationFrames();
+                if (animFrames.length === 0) return;
 
-            const drawRulers=()=>{ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height);ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);if(!imageDisplay.src||!imageDisplay.complete)return;ctxTop.font=ctxLeft.font='10px Arial';ctxTop.fillStyle=ctxLeft.fillStyle='#333';for(let x=0;x<canvas.width;x+=10){ctxTop.beginPath();ctxTop.moveTo(x,x%50===0?15:22);ctxTop.lineTo(x,30);ctxTop.stroke();if(x%50===0)ctxTop.fillText(x,x+2,12)}for(let y=0;y<canvas.height;y+=10){ctxLeft.beginPath();ctxLeft.moveTo(y%50===0?15:22,y);ctxLeft.lineTo(30,y);ctxLeft.stroke();if(y%50===0)ctxLeft.fillText(y,4,y-2)}};
-            
-            const updateResults=()=>{
-                const out={meta:{image:currentFileName,width:canvas.width,height:canvas.height},frames:frames.map(f=>({id:f.id,rect:{x:f.rect.x,y:f.rect.y,w:f.rect.w,h:f.rect.h}}))};
-                jsonOutput.textContent=JSON.stringify(out,null,2);
-                framesList.innerHTML='';
-                frames.forEach(f=>{
-                    const li=document.createElement('li');li.dataset.frameId=f.id;
-                    li.textContent=`F${f.id}: x=${f.rect.x}, y=${f.rect.y}, w=${f.rect.w}, h=${f.rect.h}`;
-                    li.addEventListener('mouseover',()=>{highlightFrame(f.id,true)});
-                    li.addEventListener('mouseout',()=>{highlightFrame(f.id,false)});
-                    framesList.appendChild(li);
+                exportGifButton.textContent = 'Generando GIF...';
+                exportGifButton.disabled = true;
+
+                const gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    workerScript: 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js'
                 });
-            };
 
-            const highlightFrame=(id,isHighlighted)=>{hoveredFrame=isHighlighted?frames.find(f=>f.id===id):null;document.querySelectorAll('#frames-list li').forEach(li=>li.classList.toggle('highlight',isHighlighted&&parseInt(li.dataset.frameId)===id));drawAll()};
-            
-            function clearAll() { lines = []; frames = []; updateAll(); }
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
 
-            // ==============================================================
-            // CÓDIGO RESTAURADO PARA EL RESTO DE FUNCIONES Y EVENT LISTENERS
-            // ==============================================================
+                animFrames.forEach(frame => {
+                    const { x, y, w, h } = frame.rect;
+                    tempCanvas.width = w;
+                    tempCanvas.height = h;
+                    tempCtx.drawImage(imageDisplay, x, y, w, h, 0, 0, w, h);
+                    gif.addFrame(tempCtx, { copy: true, delay: 1000 / animationState.fps });
+                });
+
+                gif.on('finished', (blob) => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `${currentFileName.split('.')[0]}_animation.gif`;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    exportGifButton.textContent = 'Descargar GIF Animado';
+                    exportGifButton.disabled = false;
+                });
+
+                gif.render();
+            });
+
+            // --- Event Listeners ---
             playPauseButton.addEventListener('click', toggleAnimation);
             fpsSlider.addEventListener('input', (e) => {
                 animationState.fps = parseInt(e.target.value);
                 fpsValue.textContent = e.target.value;
             });
-            exportCodeButton.addEventListener('click', () => {
-                if (frames.length === 0) return;
-                const { htmlCode, cssCode } = generateCssAnimationCode();
-                htmlCodeOutput.textContent = htmlCode;
-                cssCodeOutput.textContent = cssCode;
-                codeOutputArea.style.display = 'block';
+            firstFrameButton.addEventListener('click', () => {
+                if (animationState.isPlaying) toggleAnimation();
+                animationState.currentFrameIndex = 0;
+                drawFrameInPreview(getAnimationFrames()[0]);
             });
-            function generateCssAnimationCode() {
-                const firstFrame = frames[0].rect; const frameCount = frames.length;
-                const htmlCode = `<!DOCTYPE html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8">\n    <title>Animación de Sprite</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Mi Animación</h1>\n    <div class="stage">\n        <div class="sprite-container"></div>\n        <div class="ground"></div>\n    </div>\n</body>\n</html>`;
-                let keyframesSteps = frames.map((frame, index) => {
-                    const { x, y, w, h } = frame.rect;
-                    const stepPercentage = Math.round((index / frameCount) * 100);
-                    const selector = index === frameCount - 1 ? `${stepPercentage}%, 100%` : `${stepPercentage}%`;
-                    return `    ${selector} { width: ${w}px; height: ${h}px; background-position: -${x}px -${y}px; }`;
-                }).join('\n');
-                const cssCode = `body {\n    display: flex; justify-content: center; align-items: center; flex-direction: column;\n    min-height: 100vh; background-color: #2c3e50; font-family: sans-serif;\n}\n.stage {\n    background-color: #1a252f; border: 2px solid #55687a; width: 350px; height: 300px;\n    display: flex; justify-content: center; align-items: flex-end; position: relative;\n}\n.sprite-container {\n    width: ${firstFrame.w}px; height: ${firstFrame.h}px;\n    /* --- IMPORTANTE: Reemplaza esto con la ruta a tu imagen --- */\n    background-image: url('${currentFileName}');\n    background-repeat: no-repeat;\n    transform: scale(2); /* Ajusta la escala como desees */\n    transform-origin: bottom center;\n    image-rendering: pixelated; \n    animation: run-cycle ${((1 / animationState.fps) * frameCount).toFixed(2)}s steps(1, end) infinite;\n}\n.ground {\n    position: absolute; bottom: 0; left: 0; width: 100%; \n    height: 20px; background-color: #8c98a5; border-top: 3px solid #ffffff;\n}\n@keyframes run-cycle {\n${keyframesSteps}\n}`;
-                return { htmlCode, cssCode };
-            }
+            lastFrameButton.addEventListener('click', () => {
+                if (animationState.isPlaying) toggleAnimation();
+                const animFrames = getAnimationFrames();
+                animationState.currentFrameIndex = animFrames.length - 1;
+                drawFrameInPreview(animFrames[animationState.currentFrameIndex]);
+            });
+            jsonFormatSelect.addEventListener('change', updateJsonOutput);
+
+            // Frame list interaction
+            framesList.addEventListener('dblclick', (e) => {
+                if (e.target.classList.contains('frame-info')) {
+                    const li = e.target.parentElement;
+                    const infoSpan = li.querySelector('.frame-info');
+                    const nameInput = li.querySelector('.frame-name-input');
+                    infoSpan.style.display = 'none';
+                    nameInput.style.display = 'inline-block';
+                    nameInput.focus();
+                    nameInput.select();
+                }
+            });
+
+            framesList.addEventListener('focusout', (e) => {
+                if (e.target.classList.contains('frame-name-input')) {
+                    const input = e.target;
+                    const frameId = parseInt(input.dataset.frameId);
+                    const frame = frames.find(f => f.id === frameId);
+                    if (frame) frame.name = input.value;
+                    updateAll();
+                }
+            });
+
+            framesList.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.target.classList.contains('frame-name-input')) {
+                    e.target.blur();
+                }
+            });
+
+            framesList.addEventListener('change', (e) => {
+                if (e.target.classList.contains('frame-checkbox')) {
+                    resetAnimation();
+                }
+            });
+
+            // Canvas interaction
+            const getMousePos=(e)=>({x:(e.clientX-canvas.getBoundingClientRect().left)*(canvas.width/canvas.clientWidth),y:(e.clientY-canvas.getBoundingClientRect().top)*(canvas.height/canvas.clientHeight)});
+            const getLineAtPos=(pos)=>lines.find(l=>(l.type==='horizontal'&&Math.abs(pos.y-l.position)<5)||(l.type==='vertical'&&Math.abs(pos.x-l.position)<5))||null;
+            
+            canvas.addEventListener('mousedown',(e)=>{if(imageDisplay.src){selectedLine=getLineAtPos(getMousePos(e));if(selectedLine)isDragging=true;drawAll()}});
+            canvas.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
+            canvas.addEventListener('mouseleave',()=>{isDragging=false;selectedLine=null;hoveredLine=null;updateAll()});
+            canvas.addEventListener('dblclick', (e) => {
+                const lineToDelete = getLineAtPos(getMousePos(e));
+                if (lineToDelete && !isDragging) {
+                    lines = lines.filter(l => l.id !== lineToDelete.id);
+                    updateAll();
+                }
+            });
+            canvas.addEventListener('mousemove',(e)=>{
+                const pos=getMousePos(e);
+                if(isDragging&&selectedLine){
+                    if(selectedLine.type==='horizontal') {
+                        selectedLine.position = snapCheckbox.checked ? Math.round(pos.y / SNAP_VALUE) * SNAP_VALUE : pos.y;
+                    } else {
+                        selectedLine.position = snapCheckbox.checked ? Math.round(pos.x / SNAP_VALUE) * SNAP_VALUE : pos.x;
+                    }
+                } else {
+                    hoveredLine = getLineAtPos(pos);
+                    canvas.style.cursor=hoveredLine?(hoveredLine.type==='horizontal'?'row-resize':'col-resize'):'default';
+                    const frame=frames.find(f=>pos.x>=f.rect.x&&pos.x<=f.rect.x+f.rect.w&&pos.y>=f.rect.y&&pos.y<=f.rect.y+f.rect.h);
+                    if (frame && (!hoveredFrame || hoveredFrame.id !== frame.id)) {
+                        highlightFrame(frame.id, true);
+                    } else if (!frame && hoveredFrame) {
+                        highlightFrame(hoveredFrame.id, false);
+                    }
+                }
+                drawAll(pos);
+            });
+
+            // Other buttons
             addHLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'horizontal', position: canvas.height / 2 }); updateAll(); }});
             addVLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'vertical', position: canvas.width / 2 }); updateAll(); }});
             clearButton.addEventListener('click', clearAll);
@@ -403,12 +664,25 @@
             copyJsonButton.addEventListener('click',()=>copyHandler(copyJsonButton,jsonOutput));
             copyHtmlButton.addEventListener('click',()=>copyHandler(copyHtmlButton,htmlCodeOutput));
             copyCssButton.addEventListener('click',()=>copyHandler(copyCssButton,cssCodeOutput));
-            const getMousePos=(e)=>({x:(e.clientX-canvas.getBoundingClientRect().left)*(canvas.width/canvas.clientWidth),y:(e.clientY-canvas.getBoundingClientRect().top)*(canvas.height/canvas.clientHeight)});
-            const getLineAtPos=(pos)=>lines.find(l=>(l.type==='horizontal'&&Math.abs(pos.y-l.position)<5)||(l.type==='vertical'&&Math.abs(pos.x-l.position)<5))||null;
-            canvas.addEventListener('mousedown',(e)=>{if(imageDisplay.src){selectedLine=getLineAtPos(getMousePos(e));if(selectedLine)isDragging=true;drawAll()}});
-            canvas.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
-            canvas.addEventListener('mouseleave',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
-            canvas.addEventListener('mousemove',(e)=>{const pos=getMousePos(e);if(isDragging&&selectedLine){if(selectedLine.type==='horizontal')selectedLine.position=pos.y;else selectedLine.position=pos.x;drawAll()}else{const line=getLineAtPos(pos);canvas.style.cursor=line?(line.type==='horizontal'?'row-resize':'col-resize'):'default';const frame=frames.find(f=>pos.x>=f.rect.x&&pos.x<=f.rect.x+f.rect.w&&pos.y>=f.rect.y&&pos.y<=f.rect.y+f.rect.h);highlightFrame(frame?frame.id:null,true)}});
+            exportCodeButton.addEventListener('click', () => {
+                const animFrames = getAnimationFrames();
+                if (animFrames.length === 0) return;
+                const { htmlCode, cssCode } = generateCssAnimationCode(animFrames);
+                htmlCodeOutput.textContent = htmlCode;
+                cssCodeOutput.textContent = cssCode;
+                codeOutputArea.style.display = 'block';
+            });
+            function generateCssAnimationCode(animFrames) {
+                const firstFrame = animFrames[0].rect; const frameCount = animFrames.length;
+                const htmlCode = `<!DOCTYPE html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8">\n    <title>Animación de Sprite</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Mi Animación</h1>\n    <div class="sprite-container"></div>\n</body>\n</html>`;
+                let keyframesSteps = animFrames.map((frame, index) => {
+                    const { x, y } = frame.rect;
+                    const stepPercentage = Math.round((index / frameCount) * 100);
+                    return `    ${stepPercentage}% { background-position: -${x}px -${y}px; }`;
+                }).join('\n');
+                const cssCode = `body {\n    display: flex; justify-content: center; align-items: center; flex-direction: column;\n    min-height: 100vh; background-color: #2c3e50; font-family: sans-serif;\n}\n.sprite-container {\n    width: ${firstFrame.w}px; height: ${firstFrame.h}px;\n    background-image: url('${currentFileName}');\n    background-repeat: no-repeat;\n    transform: scale(2); /* Ajusta la escala */\n    image-rendering: pixelated;\n    animation: run-cycle ${((1 / animationState.fps) * frameCount).toFixed(2)}s steps(${frameCount - 1}, end) infinite;\n}\n@keyframes run-cycle {\n${keyframesSteps}\n    100% { background-position: -${animFrames[frameCount-1].rect.x}px -${animFrames[frameCount-1].rect.y}px; }\n}`;
+                return { htmlCode, cssCode };
+            }
         });
     </script>
 </body>
