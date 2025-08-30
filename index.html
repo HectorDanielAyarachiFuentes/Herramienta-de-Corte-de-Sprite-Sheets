@@ -3,176 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Herramienta de Corte de Sprite Sheets</title>
+    <title>Suite de Herramientas para Sprite Sheets</title>
+    <!-- Librería JSZip para crear archivos .zip en el navegador -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            padding: 20px;
-            background-color: #f0f2f5;
-            gap: 20px;
-            flex-wrap: wrap;
+            display: flex; justify-content: center; align-items: flex-start;
+            padding: 20px; background-color: #f0f2f5; gap: 20px; flex-wrap: wrap;
         }
-
-        .main-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            max-width: 800px;
+        .main-container, .results-container {
+            display: flex; flex-direction: column; gap: 20px;
         }
+        .main-container { max-width: 800px; }
+        .results-container { min-width: 400px; max-width: 400px; }
 
-        .controls, .results {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
+        .controls, .results, .generator, .preview, .code-export {
+            background-color: white; padding: 20px; border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-
-        .results {
-             min-width: 400px;
-             max-width: 400px;
-        }
-
-        h1, h2, h3 {
-            margin-top: 0;
-            color: #1c1e21;
-        }
+        h1, h2, h3 { margin-top: 0; color: #1c1e21; }
         
         button {
-            background-color: #0866ff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.2s;
-            margin-right: 10px;
-            margin-top: 5px;
+            background-color: #0866ff; color: white; border: none; padding: 10px 15px;
+            border-radius: 6px; cursor: pointer; font-size: 1em; transition: background-color 0.2s;
+            margin-right: 10px; margin-top: 5px;
         }
+        button:hover { background-color: #0655d4; }
+        button:disabled { background-color: #bcc0c4; cursor: not-allowed; }
+        button.secondary { background-color: #e4e6eb; color: #4b4f56; }
+        button.secondary:hover { background-color: #d8dbdf; }
+        button.success { background-color: #31a24c; }
+        button.success:hover { background-color: #2b8a41; }
 
-        button:hover {
-            background-color: #0655d4;
-        }
+        /* --- Generador de Parrilla --- */
+        .generator fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 10px; }
+        .generator legend { font-weight: 600; padding: 0 5px; }
+        .generator .input-group { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .generator input[type="number"] { width: 60px; padding: 5px; }
 
-        button.secondary {
-            background-color: #e4e6eb;
-            color: #4b4f56;
-        }
-        button.secondary:hover {
-            background-color: #d8dbdf;
-        }
+        /* --- Previsualización de Animación --- */
+        .preview-area { text-align: center; }
+        #preview-canvas { background-color: #e9ebee; border: 1px solid #ccc; margin-bottom: 10px; image-rendering: pixelated; image-rendering: crisp-edges; }
+        .preview-controls { display: flex; justify-content: center; align-items: center; gap: 15px; }
         
-        .editor-area {
-            display: grid;
-            grid-template-columns: 30px auto;
-            grid-template-rows: 30px auto;
-            width: fit-content;
-        }
-
+        .editor-area { display: grid; grid-template-columns: 30px auto; grid-template-rows: 30px auto; width: fit-content; max-width: 100%; overflow: auto; }
         .ruler-corner { background-color: #f0f2f5; border-bottom: 1px solid #ccc; border-right: 1px solid #ccc; }
         #ruler-top { background-color: #f0f2f5; border-bottom: 1px solid #ccc; }
         #ruler-left { background-color: #f0f2f5; border-right: 1px solid #ccc; }
-
-        #image-container {
-            grid-column: 2 / 3;
-            grid-row: 2 / 3;
-            position: relative;
-            min-height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
+        #image-container { grid-area: 2 / 2 / 3 / 3; position: relative; }
         #image-display { display: block; }
         #measurement-canvas { position: absolute; top: 0; left: 0; z-index: 10; cursor: default; }
         
         #image-dimensions { background-color: #e4e6eb; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.95em; text-align: center; }
-
-        #json-output-container {
-            position: relative;
-        }
-        
-        #json-output {
-            background-color: #282c34;
-            color: #abb2bf;
-            padding: 15px;
-            border-radius: 6px;
-            white-space: pre;
-            overflow-x: auto;
-            max-height: 300px;
-            font-family: "Courier New", Courier, monospace;
-            font-size: 0.85em;
-        }
-        
-        #copy-json-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            font-size: 0.8em;
-            background-color: #4a505c;
-        }
-
-        #frames-list {
-            list-style-type: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto;
-        }
-        
-        #frames-list li {
-            background-color: #f0f2f5; padding: 8px; border-radius: 4px; margin-bottom: 5px;
-            font-family: "Courier New", Courier, monospace; font-size: 0.9em; cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #frames-list li:hover, #frames-list li.highlight {
-            background-color: #d8e7ff; /* Azul claro para resaltar */
-        }
+        .code-container { position: relative; margin-top: 10px; }
+        .code-container pre, #json-output { background-color: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; overflow-x: auto; max-height: 200px; font-family: "Courier New", Courier, monospace; font-size: 0.85em; }
+        .copy-button { position: absolute; top: 10px; right: 10px; padding: 5px 10px; font-size: 0.8em; background-color: #4a505c; }
+        #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        #frames-list li { background-color: #f0f2f5; padding: 8px; border-radius: 4px; margin-bottom: 5px; font-family: "Courier New", Courier, monospace; font-size: 0.9em; cursor: pointer; transition: background-color 0.2s; }
+        #frames-list li:hover, #frames-list li.highlight { background-color: #d8e7ff; }
     </style>
 </head>
 <body>
 
     <div class="main-container">
-        <h1>Herramienta de Corte de Sprite Sheets</h1>
+        <h1>Suite de Herramientas para Sprite Sheets</h1>
         
         <div class="controls">
             <h2>1. Carga tu Sprite Sheet</h2>
             <input type="file" id="image-loader" accept="image/*">
-            <h2>2. Define la parrilla de corte</h2>
-            <p>Añade líneas horizontales y verticales. Los frames se detectarán automáticamente.</p>
-            <button id="add-h-line">Añadir Línea Horizontal</button>
-            <button id="add-v-line">Añadir Línea Vertical</button>
-            <button id="clear-button" class="secondary">Limpiar Todo</button>
+        </div>
+
+        <div class="generator">
+            <h2>2. Define la Parrilla</h2>
+            <fieldset>
+                <legend>Generación Automática</legend>
+                <div class="input-group">
+                    <label>Filas:</label><input type="number" id="rows-input" value="2" min="1">
+                    <label>Columnas:</label><input type="number" id="cols-input" value="5" min="1">
+                </div>
+                <button id="generate-grid-button" disabled>Generar por Filas/Columnas</button>
+            </fieldset>
+            <fieldset>
+                <legend>Ajuste Manual</legend>
+                <p>Añade o arrastra líneas para refinar la parrilla.</p>
+                <button id="add-h-line" disabled>Añadir Línea Horizontal</button>
+                <button id="add-v-line" disabled>Añadir Línea Vertical</button>
+                <button id="clear-button" class="secondary" disabled>Limpiar Todo</button>
+            </fieldset>
         </div>
         
         <div class="editor-area">
-            <div class="ruler-corner"></div>
-            <canvas id="ruler-top"></canvas>
-            <canvas id="ruler-left"></canvas>
+            <div class="ruler-corner"></div> <canvas id="ruler-top"></canvas> <canvas id="ruler-left"></canvas>
             <div id="image-container">
-                <img id="image-display" src="" alt="">
+                <img id="image-display" src="" alt="Tu sprite sheet aparecerá aquí">
                 <canvas id="measurement-canvas"></canvas>
             </div>
         </div>
     </div>
     
-    <div class="results">
-        <h2>3. Resultados</h2>
-        <p id="image-dimensions">Carga una imagen para empezar.</p>
-        
-        <h3>Datos de Frames (JSON)</h3>
-        <div id="json-output-container">
-            <pre><code id="json-output">Añade líneas para generar los frames.</code></pre>
-            <button id="copy-json-button">Copiar</button>
+    <div class="results-container">
+        <div class="results">
+            <h2>3. Resultados y Exportación</h2>
+            <p id="image-dimensions">Carga una imagen para empezar.</p>
+            <button id="export-zip-button" disabled>Descargar Frames (ZIP)</button>
         </div>
 
-        <h3>Lista de Frames</h3>
-        <ul id="frames-list"></ul>
+        <div class="preview">
+            <h3>Previsualización de Animación</h3>
+            <div class="preview-area">
+                <canvas id="preview-canvas" width="150" height="150"></canvas>
+                <div class="preview-controls">
+                    <button id="play-pause-button" disabled>▶️ Play</button>
+                    <label for="fps-slider">FPS: <span id="fps-value">12</span></label>
+                    <input type="range" id="fps-slider" min="1" max="60" value="12" style="width: 150px;" disabled>
+                </div>
+            </div>
+        </div>
+        
+        <div class="code-export">
+            <h3>Exportar Animación a Código</h3>
+            <p>Genera un archivo HTML y CSS funcional para tu animación.</p>
+            <button id="export-code-button" class="success" disabled>Generar HTML/CSS</button>
+            <div id="code-output-area" style="display: none; margin-top: 15px;">
+                <h4>Código HTML</h4>
+                <div class="code-container">
+                    <pre><code id="html-code-output"></code></pre>
+                    <button class="copy-button" id="copy-html-button">Copiar</button>
+                </div>
+                <h4>Código CSS</h4>
+                <div class="code-container">
+                    <pre><code id="css-code-output"></code></pre>
+                    <button class="copy-button" id="copy-css-button">Copiar</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="results">
+            <h3>Datos de Frames (JSON)</h3>
+            <div class="code-container">
+                <pre><code id="json-output"></code></pre>
+                <button id="copy-json-button" class="copy-button">Copiar</button>
+            </div>
+            <h3>Lista de Frames</h3>
+            <ul id="frames-list"></ul>
+        </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- ELEMENTOS DEL DOM ---
+            // --- DOM Elements ---
             const imageLoader = document.getElementById('image-loader');
             const imageDisplay = document.getElementById('image-display');
             const canvas = document.getElementById('measurement-canvas'), ctx = canvas.getContext('2d');
@@ -181,15 +161,34 @@
             const imageDimensionsP = document.getElementById('image-dimensions');
             const jsonOutput = document.getElementById('json-output');
             const framesList = document.getElementById('frames-list');
+            const rowsInput = document.getElementById('rows-input'), colsInput = document.getElementById('cols-input');
+            const generateGridButton = document.getElementById('generate-grid-button');
             const addHLineButton = document.getElementById('add-h-line'), addVLineButton = document.getElementById('add-v-line');
             const clearButton = document.getElementById('clear-button'), copyJsonButton = document.getElementById('copy-json-button');
-            
-            // --- ESTADO DE LA APLICACIÓN ---
+            const exportZipButton = document.getElementById('export-zip-button');
+            const previewCanvas = document.getElementById('preview-canvas'), previewCtx = previewCanvas.getContext('2d');
+            const playPauseButton = document.getElementById('play-pause-button');
+            const fpsSlider = document.getElementById('fps-slider'), fpsValue = document.getElementById('fps-value');
+            const exportCodeButton = document.getElementById('export-code-button');
+            const codeOutputArea = document.getElementById('code-output-area');
+            const htmlCodeOutput = document.getElementById('html-code-output');
+            const cssCodeOutput = document.getElementById('css-code-output');
+            const copyHtmlButton = document.getElementById('copy-html-button');
+            const copyCssButton = document.getElementById('copy-css-button');
+            const allButtons = document.querySelectorAll('button, input[type="range"]');
+
+            // --- App State ---
             let lines = [], frames = [], selectedLine = null, hoveredFrame = null, isDragging = false;
             let currentFileName = "spritesheet.png";
-            const RULER_SIZE = 30, HIT_TOLERANCE = 5;
+            let animationState = { isPlaying: false, fps: 12, currentFrame: 0, lastTime: 0, animationFrameId: null };
+            
+            // --- Initialization & Image Loading ---
+            const setControlsEnabled = (enabled) => {
+                allButtons.forEach(btn => { if (btn.id !== 'image-loader') btn.disabled = !enabled; });
+                if(!enabled) { codeOutputArea.style.display = 'none'; }
+            };
+            setControlsEnabled(false);
 
-            // --- INICIALIZACIÓN Y CARGA DE IMAGEN ---
             imageLoader.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
@@ -205,16 +204,19 @@
                 const imgWidth = imageDisplay.naturalWidth, imgHeight = imageDisplay.naturalHeight;
                 canvas.width = rulerTop.width = imgWidth;
                 canvas.height = rulerLeft.height = imgHeight;
-                rulerTop.height = rulerLeft.width = RULER_SIZE;
+                rulerTop.height = rulerLeft.width = 30;
                 imageDimensionsP.innerHTML = `<strong>${currentFileName}:</strong> ${imgWidth}px &times; ${imgHeight}px`;
-                clearAll();
+                clearAll(); // Limpia el estado anterior
+                setControlsEnabled(true);
             };
 
-            // --- LÓGICA PRINCIPAL ---
+            // --- Core Logic ---
             const updateAll = () => {
                 calculateFrames();
                 drawAll();
                 updateResults();
+                resetAnimation();
+                codeOutputArea.style.display = 'none';
             };
 
             const calculateFrames = () => {
@@ -227,132 +229,186 @@
                     for (let j = 0; j < vPositions.length - 1; j++) {
                         const x = vPositions[j], y = hPositions[i];
                         const w = vPositions[j+1] - x, h = hPositions[i+1] - y;
-                        if (w > 0 && h > 0) {
-                            frames.push({ id: frameId++, rect: { x, y, w, h } });
+                        if (w > 1 && h > 1) {
+                            frames.push({ id: frameId++, rect: { x:Math.round(x), y:Math.round(y), w:Math.round(w), h:Math.round(h) } });
                         }
                     }
                 }
             };
 
-            // --- FUNCIONES DE DIBUJO ---
+            // --- Grid Generation ---
+            generateGridButton.addEventListener('click', () => {
+                const rows = parseInt(rowsInput.value); const cols = parseInt(colsInput.value);
+                if (isNaN(rows) || isNaN(cols) || rows < 1 || cols < 1) return;
+                lines = []; const cellHeight = canvas.height / rows; const cellWidth = canvas.width / cols;
+                for (let i = 1; i < rows; i++) lines.push({ id: Date.now() + i, type: 'horizontal', position: i * cellHeight });
+                for (let i = 1; i < cols; i++) lines.push({ id: Date.now() + rows + i, type: 'vertical', position: i * cellWidth });
+                updateAll();
+            });
+
+            // ==========================================================
+            // --- TODAS LAS FUNCIONES DE ABAJO HAN SIDO RESTAURADAS ---
+            // ==========================================================
+            const animationLoop = (timestamp) => {
+                if (!animationState.isPlaying) return;
+                
+                const elapsed = timestamp - animationState.lastTime;
+                if (elapsed > 1000 / animationState.fps) {
+                    animationState.lastTime = timestamp;
+                    if (frames.length > 0) {
+                        const frame = frames[animationState.currentFrame];
+                        const { x, y, w, h } = frame.rect;
+                        const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
+                        const drawW = w * scale; const drawH = h * scale;
+                        const drawX = (previewCanvas.width - drawW) / 2;
+                        const drawY = (previewCanvas.height - drawH) / 2;
+                        
+                        previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                        previewCtx.drawImage(imageDisplay, x, y, w, h, drawX, drawY, drawW, drawH);
+                        
+                        animationState.currentFrame = (animationState.currentFrame + 1) % frames.length;
+                    }
+                }
+                animationState.animationFrameId = requestAnimationFrame(animationLoop);
+            };
+
+            const toggleAnimation = () => {
+                animationState.isPlaying = !animationState.isPlaying;
+                if (animationState.isPlaying && frames.length > 0) {
+                    playPauseButton.textContent = '⏸️ Pausa';
+                    animationState.lastTime = performance.now();
+                    animationLoop(animationState.lastTime);
+                } else {
+                    playPauseButton.textContent = '▶️ Play';
+                    cancelAnimationFrame(animationState.animationFrameId);
+                }
+            };
+
+            const resetAnimation = () => {
+                if (animationState.isPlaying) toggleAnimation(); // Stop if playing
+                animationState.currentFrame = 0;
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                if (frames.length > 0) {
+                    const { x, y, w, h } = frames[0].rect;
+                    const scale = Math.min(previewCanvas.width / w, previewCanvas.height / h);
+                    previewCtx.drawImage(imageDisplay, x, y, w, h, (previewCanvas.width - w * scale)/2, (previewCanvas.height - h * scale)/2, w*scale, h*scale);
+                }
+            };
+            
+            exportZipButton.addEventListener('click', async () => {
+                if (frames.length === 0) return;
+                exportZipButton.textContent = 'Generando...';
+                exportZipButton.disabled = true;
+
+                const zip = new JSZip();
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                const promises = frames.map(frame => {
+                    const { x, y, w, h } = frame.rect;
+                    tempCanvas.width = w; tempCanvas.height = h;
+                    tempCtx.drawImage(imageDisplay, x, y, w, h, 0, 0, w, h);
+                    return new Promise(resolve => {
+                        tempCanvas.toBlob(blob => {
+                            zip.file(`${currentFileName.split('.')[0]}_${frame.id}.png`, blob);
+                            resolve();
+                        });
+                    });
+                });
+                
+                await Promise.all(promises);
+                
+                zip.generateAsync({type:"blob"}).then(content => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(content);
+                    link.download = `${currentFileName.split('.')[0]}_frames.zip`;
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                });
+
+                exportZipButton.textContent = 'Descargar Frames (ZIP)';
+                exportZipButton.disabled = false;
+            });
+
             const drawAll = () => {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                drawFrames();
-                drawLines();
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                frames.forEach(f => {
+                    const {x,y,w,h} = f.rect;
+                    ctx.fillStyle = (hoveredFrame && hoveredFrame.id === f.id) ? 'rgba(0, 255, 0, 0.3)' : 'rgba(8, 102, 255, 0.15)';
+                    ctx.fillRect(x,y,w,h);
+                    ctx.strokeStyle='rgba(8, 102, 255, 0.4)'; ctx.strokeRect(x,y,w,h);
+                    ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.font='12px Arial'; ctx.fillText(f.id, x+4, y+14);
+                });
+                lines.forEach(l => {
+                    ctx.beginPath();
+                    const isSel = selectedLine && selectedLine.id === l.id;
+                    ctx.strokeStyle = isSel ? '#ff0000' : '#0866ff'; ctx.lineWidth = isSel ? 3:2;
+                    if(l.type==='horizontal'){ ctx.moveTo(0,l.position); ctx.lineTo(canvas.width,l.position); }
+                    else { ctx.moveTo(l.position,0); ctx.lineTo(l.position,canvas.height); }
+                    ctx.stroke();
+                });
                 drawRulers();
             };
 
-            const drawFrames = () => {
-                frames.forEach(frame => {
-                    const { x, y, w, h } = frame.rect;
-                    ctx.fillStyle = 'rgba(8, 102, 255, 0.15)';
-                    ctx.fillRect(x, y, w, h);
-                    ctx.strokeStyle = 'rgba(8, 102, 255, 0.4)';
-                    ctx.strokeRect(x, y, w, h);
-
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                    ctx.font = '12px Arial';
-                    ctx.fillText(frame.id, x + 4, y + 14);
-                });
-                
-                if (hoveredFrame) {
-                    const { x, y, w, h } = hoveredFrame.rect;
-                    ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
-                    ctx.fillRect(x, y, w, h);
-                }
-            };
-
-            const drawLines = () => {
-                lines.forEach(line => {
-                    ctx.beginPath();
-                    const isSelected = selectedLine && selectedLine.id === line.id;
-                    ctx.strokeStyle = isSelected ? 'rgba(255, 0, 0, 1)' : 'rgba(8, 102, 255, 0.9)';
-                    ctx.lineWidth = isSelected ? 3 : 2;
-                    if (line.type === 'horizontal') {
-                        ctx.moveTo(0, line.position); ctx.lineTo(canvas.width, line.position);
-                    } else {
-                        ctx.moveTo(line.position, 0); ctx.lineTo(line.position, canvas.height);
-                    }
-                    ctx.stroke();
-                });
-            };
+            const drawRulers=()=>{ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height);ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);if(!imageDisplay.src||!imageDisplay.complete)return;ctxTop.font=ctxLeft.font='10px Arial';ctxTop.fillStyle=ctxLeft.fillStyle='#333';for(let x=0;x<canvas.width;x+=10){ctxTop.beginPath();ctxTop.moveTo(x,x%50===0?15:22);ctxTop.lineTo(x,30);ctxTop.stroke();if(x%50===0)ctxTop.fillText(x,x+2,12)}for(let y=0;y<canvas.height;y+=10){ctxLeft.beginPath();ctxLeft.moveTo(y%50===0?15:22,y);ctxLeft.lineTo(30,y);ctxLeft.stroke();if(y%50===0)ctxLeft.fillText(y,4,y-2)}};
             
-            const drawRulers = () => {
-                ctxTop.clearRect(0,0,rulerTop.width,rulerTop.height); ctxLeft.clearRect(0,0,rulerLeft.width,rulerLeft.height);
-                if (!imageDisplay.src) return;
-                ctxTop.font=ctxLeft.font='10px Arial'; ctxTop.fillStyle=ctxLeft.fillStyle='#333';
-                for (let x=0; x<canvas.width; x+=10) { ctxTop.beginPath(); ctxTop.moveTo(x, x%50===0?15:22); ctxTop.lineTo(x, RULER_SIZE); ctxTop.stroke(); if(x%50===0) ctxTop.fillText(x, x+2, 12); }
-                for (let y=0; y<canvas.height; y+=10) { ctxLeft.beginPath(); ctxLeft.moveTo(y%50===0?15:22, y); ctxLeft.lineTo(RULER_SIZE, y); ctxLeft.stroke(); if(y%50===0) ctxLeft.fillText(y, 4, y-2); }
-            };
-
-            // --- ACTUALIZACIÓN DE RESULTADOS ---
-            const updateResults = () => {
-                // Generar y mostrar JSON
-                const outputData = {
-                    meta: { image: currentFileName, width: canvas.width, height: canvas.height },
-                    frames: frames.map(f => ({ id: f.id, rect: {
-                        x: Math.round(f.rect.x), y: Math.round(f.rect.y), w: Math.round(f.rect.w), h: Math.round(f.rect.h)
-                    }}))
-                };
-                jsonOutput.textContent = JSON.stringify(outputData, null, 2);
-
-                // Generar lista interactiva de frames
-                framesList.innerHTML = '';
-                frames.forEach(frame => {
-                    const li = document.createElement('li');
-                    li.dataset.frameId = frame.id;
-                    li.textContent = `Frame ${frame.id}: x=${Math.round(frame.rect.x)}, y=${Math.round(frame.rect.y)}, w=${Math.round(frame.rect.w)}, h=${Math.round(frame.rect.h)}`;
-                    
-                    li.addEventListener('mouseover', () => highlightFrame(frame.id, true));
-                    li.addEventListener('mouseout', () => highlightFrame(frame.id, false));
-
+            const updateResults=()=>{
+                const out={meta:{image:currentFileName,width:canvas.width,height:canvas.height},frames:frames.map(f=>({id:f.id,rect:{x:f.rect.x,y:f.rect.y,w:f.rect.w,h:f.rect.h}}))};
+                jsonOutput.textContent=JSON.stringify(out,null,2);
+                framesList.innerHTML='';
+                frames.forEach(f=>{
+                    const li=document.createElement('li');li.dataset.frameId=f.id;
+                    li.textContent=`F${f.id}: x=${f.rect.x}, y=${f.rect.y}, w=${f.rect.w}, h=${f.rect.h}`;
+                    li.addEventListener('mouseover',()=>{highlightFrame(f.id,true)});
+                    li.addEventListener('mouseout',()=>{highlightFrame(f.id,false)});
                     framesList.appendChild(li);
                 });
             };
-            
-            const highlightFrame = (id, isHighlighted) => {
-                hoveredFrame = isHighlighted ? frames.find(f => f.id === id) : null;
-                document.querySelectorAll('#frames-list li').forEach(li => {
-                    li.classList.toggle('highlight', isHighlighted && parseInt(li.dataset.frameId) === id);
-                });
-                drawAll();
-            };
 
-            // --- EVENTOS DE INTERACCIÓN ---
+            const highlightFrame=(id,isHighlighted)=>{hoveredFrame=isHighlighted?frames.find(f=>f.id===id):null;document.querySelectorAll('#frames-list li').forEach(li=>li.classList.toggle('highlight',isHighlighted&&parseInt(li.dataset.frameId)===id));drawAll()};
+            
+            function clearAll() { lines = []; frames = []; updateAll(); }
+
+            // ==============================================================
+            // CÓDIGO RESTAURADO PARA EL RESTO DE FUNCIONES Y EVENT LISTENERS
+            // ==============================================================
+            playPauseButton.addEventListener('click', toggleAnimation);
+            fpsSlider.addEventListener('input', (e) => {
+                animationState.fps = parseInt(e.target.value);
+                fpsValue.textContent = e.target.value;
+            });
+            exportCodeButton.addEventListener('click', () => {
+                if (frames.length === 0) return;
+                const { htmlCode, cssCode } = generateCssAnimationCode();
+                htmlCodeOutput.textContent = htmlCode;
+                cssCodeOutput.textContent = cssCode;
+                codeOutputArea.style.display = 'block';
+            });
+            function generateCssAnimationCode() {
+                const firstFrame = frames[0].rect; const frameCount = frames.length;
+                const htmlCode = `<!DOCTYPE html>\n<html lang="es">\n<head>\n    <meta charset="UTF-8">\n    <title>Animación de Sprite</title>\n    <link rel="stylesheet" href="style.css">\n</head>\n<body>\n    <h1>Mi Animación</h1>\n    <div class="stage">\n        <div class="sprite-container"></div>\n        <div class="ground"></div>\n    </div>\n</body>\n</html>`;
+                let keyframesSteps = frames.map((frame, index) => {
+                    const { x, y, w, h } = frame.rect;
+                    const stepPercentage = Math.round((index / frameCount) * 100);
+                    const selector = index === frameCount - 1 ? `${stepPercentage}%, 100%` : `${stepPercentage}%`;
+                    return `    ${selector} { width: ${w}px; height: ${h}px; background-position: -${x}px -${y}px; }`;
+                }).join('\n');
+                const cssCode = `body {\n    display: flex; justify-content: center; align-items: center; flex-direction: column;\n    min-height: 100vh; background-color: #2c3e50; font-family: sans-serif;\n}\n.stage {\n    background-color: #1a252f; border: 2px solid #55687a; width: 350px; height: 300px;\n    display: flex; justify-content: center; align-items: flex-end; position: relative;\n}\n.sprite-container {\n    width: ${firstFrame.w}px; height: ${firstFrame.h}px;\n    /* --- IMPORTANTE: Reemplaza esto con la ruta a tu imagen --- */\n    background-image: url('${currentFileName}');\n    background-repeat: no-repeat;\n    transform: scale(2); /* Ajusta la escala como desees */\n    transform-origin: bottom center;\n    image-rendering: pixelated; \n    animation: run-cycle ${((1 / animationState.fps) * frameCount).toFixed(2)}s steps(1, end) infinite;\n}\n.ground {\n    position: absolute; bottom: 0; left: 0; width: 100%; \n    height: 20px; background-color: #8c98a5; border-top: 3px solid #ffffff;\n}\n@keyframes run-cycle {\n${keyframesSteps}\n}`;
+                return { htmlCode, cssCode };
+            }
             addHLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'horizontal', position: canvas.height / 2 }); updateAll(); }});
             addVLineButton.addEventListener('click', () => { if (imageDisplay.src) { lines.push({ id: Date.now(), type: 'vertical', position: canvas.width / 2 }); updateAll(); }});
             clearButton.addEventListener('click', clearAll);
-
-            copyJsonButton.addEventListener('click', () => {
-                navigator.clipboard.writeText(jsonOutput.textContent).then(() => {
-                    copyJsonButton.textContent = '¡Copiado!';
-                    setTimeout(() => copyJsonButton.textContent = 'Copiar', 2000);
-                });
-            });
-
-            const getMousePos = (e) => ({ x: (e.clientX - canvas.getBoundingClientRect().left) * (canvas.width/canvas.clientWidth), y: (e.clientY - canvas.getBoundingClientRect().top) * (canvas.height/canvas.clientHeight) });
-            const getLineAtPosition = (pos) => lines.find(l => (l.type === 'horizontal' && Math.abs(pos.y - l.position) < HIT_TOLERANCE) || (l.type === 'vertical' && Math.abs(pos.x - l.position) < HIT_TOLERANCE)) || null;
-
-            canvas.addEventListener('mousedown', (e) => { if(imageDisplay.src){ selectedLine = getLineAtPosition(getMousePos(e)); if(selectedLine) isDragging = true; drawAll(); }});
-            canvas.addEventListener('mouseup', () => { if(isDragging){ isDragging = false; selectedLine = null; updateAll(); }});
-            canvas.addEventListener('mouseleave', () => { if(isDragging){ isDragging = false; selectedLine = null; updateAll(); }});
-
-            canvas.addEventListener('mousemove', (e) => {
-                const pos = getMousePos(e);
-                if (isDragging && selectedLine) {
-                    if (selectedLine.type === 'horizontal') selectedLine.position = pos.y; else selectedLine.position = pos.x;
-                    updateAll();
-                } else {
-                    const lineUnderMouse = getLineAtPosition(pos);
-                    canvas.style.cursor = lineUnderMouse ? (lineUnderMouse.type === 'horizontal' ? 'row-resize' : 'col-resize') : 'default';
-                    highlightFrame(frames.find(f => pos.x >= f.rect.x && pos.x <= f.rect.x + f.rect.w && pos.y >= f.rect.y && pos.y <= f.rect.y + f.rect.h)?.id, true);
-                }
-            });
-
-            function clearAll() {
-                lines = [];
-                updateAll();
-            }
+            const copyHandler=(el,textEl)=>{navigator.clipboard.writeText(textEl.textContent).then(()=>{const t=el.textContent;el.textContent="¡Copiado!",setTimeout((()=>el.textContent=t),2000)})};
+            copyJsonButton.addEventListener('click',()=>copyHandler(copyJsonButton,jsonOutput));
+            copyHtmlButton.addEventListener('click',()=>copyHandler(copyHtmlButton,htmlCodeOutput));
+            copyCssButton.addEventListener('click',()=>copyHandler(copyCssButton,cssCodeOutput));
+            const getMousePos=(e)=>({x:(e.clientX-canvas.getBoundingClientRect().left)*(canvas.width/canvas.clientWidth),y:(e.clientY-canvas.getBoundingClientRect().top)*(canvas.height/canvas.clientHeight)});
+            const getLineAtPos=(pos)=>lines.find(l=>(l.type==='horizontal'&&Math.abs(pos.y-l.position)<5)||(l.type==='vertical'&&Math.abs(pos.x-l.position)<5))||null;
+            canvas.addEventListener('mousedown',(e)=>{if(imageDisplay.src){selectedLine=getLineAtPos(getMousePos(e));if(selectedLine)isDragging=true;drawAll()}});
+            canvas.addEventListener('mouseup',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
+            canvas.addEventListener('mouseleave',()=>{if(isDragging){isDragging=false;selectedLine=null;updateAll()}});
+            canvas.addEventListener('mousemove',(e)=>{const pos=getMousePos(e);if(isDragging&&selectedLine){if(selectedLine.type==='horizontal')selectedLine.position=pos.y;else selectedLine.position=pos.x;drawAll()}else{const line=getLineAtPos(pos);canvas.style.cursor=line?(line.type==='horizontal'?'row-resize':'col-resize'):'default';const frame=frames.find(f=>pos.x>=f.rect.x&&pos.x<=f.rect.x+f.rect.w&&pos.y>=f.rect.y&&pos.y<=f.rect.y+f.rect.h);highlightFrame(frame?frame.id:null,true)}});
         });
     </script>
 </body>
