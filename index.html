@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprite Sheet Suite v3.8 "Phoenix"</title>
+    <title>Sprite Sheet Suite v3.9 "Phoenix"</title>
     <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -42,6 +42,11 @@
             width: 100%;
             max-width: 1600px;
         }
+        @media (max-width: 1200px) {
+            .app-container {
+                grid-template-columns: 1fr;
+            }
+        }
         .main-panel, .side-panel {
             display: flex;
             flex-direction: column;
@@ -54,8 +59,13 @@
             padding: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
+        .header-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
         h1, h2, h3 { margin: 0 0 15px 0; color: var(--text-main); border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        h1 { font-size: 1.8em; border: none; }
+        h1 { font-size: 1.8em; border: none; padding: 0; margin: 0; }
         h1 .version { font-size: 0.5em; color: var(--primary); }
         
         /* --- Welcome Screen & Drag-Drop --- */
@@ -116,27 +126,49 @@
             margin: -10px 0 10px 0;
             font-style: italic;
         }
-        #frames-list { list-style-type: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; }
-        #frames-list li { display: flex; align-items: center; gap: 8px; background-color: var(--bg-surface); padding: 8px; border-bottom: 1px solid var(--border-color); font-family: var(--font-mono); font-size: 0.9em; cursor: grab; transition: background-color 0.2s; }
-        #frames-list li:last-child { border-bottom: none; }
-        #frames-list li:hover, #frames-list li.highlight { background-color: #3b4261; }
-        #frames-list li .frame-info { flex-grow: 1; }
+        #frames-list, #project-history-list { list-style-type: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 4px; }
+        #frames-list li, #project-history-list li { display: flex; align-items: center; gap: 8px; background-color: var(--bg-surface); padding: 8px; border-bottom: 1px solid var(--border-color); font-family: var(--font-mono); font-size: 0.9em; transition: background-color 0.2s; }
+        #frames-list li:last-child, #project-history-list li:last-child { border-bottom: none; }
+        #frames-list li:hover, #project-history-list li:hover { background-color: #3b4261; }
+        #frames-list li { cursor: grab; }
+        #project-history-list li { cursor: pointer; }
+        #frames-list li .frame-info, #project-history-list li .history-name { flex-grow: 1; }
         #frames-list li .frame-name-input { display: none; width: 100px; }
         #frames-list li .drag-handle { cursor: grab; color: #888; padding-right: 5px; }
+        .history-thumb { width: 40px; height: 40px; object-fit: contain; background-color: var(--bg-dark); border-radius: 4px; }
+        .delete-history-btn { background: none; border: none; color: var(--danger); cursor: pointer; padding: 5px; }
 
         /* --- Code Export Professional Look --- */
+        #export-panel {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 0;
+        }
+        #code-export-details[open] {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 0;
+        }
         #code-preview-container {
             display: none;
             grid-template-columns: 2fr 1fr;
             gap: 15px;
             margin-top: 15px;
+            flex-grow: 1;
+            min-height: 0;
         }
-        .code-editors { display: flex; flex-direction: column; gap: 10px; }
+        .code-editors { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
         .code-editor {
             background-color: var(--bg-dark);
             border: 1px solid var(--border-color);
             border-radius: 6px;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            min-height: 0;
         }
         .code-editor-header {
             background-color: var(--bg-surface);
@@ -146,6 +178,7 @@
             color: var(--text-secondary);
             border-bottom: 1px solid var(--border-color);
             position: relative;
+            flex-shrink: 0;
         }
         .code-editor-header .copy-button {
             position: absolute;
@@ -159,7 +192,9 @@
         }
         .code-editor-body {
             display: flex;
-            max-height: 180px;
+            flex-grow: 1;
+            min-height: 0;
+            overflow: auto;
         }
         .line-numbers {
             padding: 10px 8px;
@@ -169,21 +204,18 @@
             text-align: right;
             background-color: var(--bg-panel);
             user-select: none;
-            overflow-y: hidden;
         }
         .line-numbers span { display: block; }
         .code-editor pre {
             margin: 0;
             padding: 10px;
             white-space: pre;
-            overflow: auto;
             flex-grow: 1;
             font-family: var(--font-mono);
             font-size: 0.85em;
             line-height: 1.5;
         }
         .line-numbers { line-height: 1.5; }
-        .code-editor pre::-webkit-scrollbar, .line-numbers::-webkit-scrollbar { display: none; }
         .code-editor-body::-webkit-scrollbar { width: 8px; }
         .code-editor-body::-webkit-scrollbar-track { background: var(--bg-panel); }
         .code-editor-body::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
@@ -266,7 +298,7 @@
 
     <div id="welcome-screen">
         <div id="drop-zone">
-            <h2>Sprite Sheet Suite v3.8</h2>
+            <h2>Sprite Sheet Suite v3.9</h2>
             <p>Arrastra y suelta tu imagen aquí</p>
             <p>o</p>
             <label for="image-loader" id="image-loader-label">Selecciona un archivo</label>
@@ -276,9 +308,12 @@
 
     <div class="app-container" style="visibility: hidden;">
         <div class="main-panel">
-            <div class="panel">
-                <h1>Sprite Sheet Suite <span class="version">v3.8 Phoenix</span></h1>
-                <p id="image-dimensions">Carga una imagen para empezar.</p>
+            <div class="panel header-panel">
+                <div>
+                    <h1>Sprite Sheet Suite <span class="version">v3.9 Legacy</span></h1>
+                    <p id="image-dimensions" style="margin: 5px 0 0 0;"></p>
+                </div>
+                <button id="change-image-button">Cambiar Imagen</button>
             </div>
             <div class="panel">
                 <h2>Parrilla y Edición</h2>
@@ -319,6 +354,10 @@
         </div>
         <div class="side-panel">
             <div class="panel">
+                <h3>Historial de Proyectos</h3>
+                <ul id="project-history-list"></ul>
+            </div>
+            <div class="panel">
                 <h3>Previsualización</h3>
                 <canvas id="preview-canvas" width="150" height="150" style="background-color: var(--bg-dark); border: 1px solid var(--border-color); margin: 0 auto 10px; display: block; image-rendering: pixelated;"></canvas>
                 <div class="input-group" style="justify-content: center;">
@@ -347,7 +386,7 @@
                 </div>
                 <ul id="frames-list"></ul>
             </div>
-            <div class="panel">
+            <div class="panel" id="export-panel">
                 <h3>Exportar</h3>
                 <details>
                     <summary>Exportar Frames Individuales</summary>
@@ -364,7 +403,7 @@
                         <button id="export-gif-button" disabled>Descargar GIF</button>
                     </div>
                 </details>
-                <details>
+                <details id="code-export-details">
                     <summary>Exportar a Código</summary>
                     <div style="padding-top: 10px;">
                         <button id="export-code-button" disabled>Generar HTML/CSS</button>
@@ -429,7 +468,7 @@
             </a>
             <a href="https://codepen.io/HectorDanielAyarachiFuentes" target="_blank" rel="noopener noreferrer" title="CodePen">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 138 26" role="img" aria-label="CodePen icon">
-                    <path d="M15.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM46.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM77.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM108.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM24.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM55.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM86.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM117.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM35.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM66.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM97.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM128.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM138 13.1c0 7.2-5.9 13.1-13.1 13.1-7.2 0-13.1-5.9-13.1-13.1 0-7.2 5.9-13.1 13.1-13.1 7.2 0 13.1 5.9 13.1 13.1zM124.9 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM108.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM97.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM86.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM77.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM66.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM55.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3-3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM46.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM35.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM24.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM15.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM13.1 0c7.2 0 13.1 5.9 13.1 13.1 0 7.2-5.9 13.1-13.1 13.1C5.9 26.2 0 20.3 0 13.1 0 5.9 5.9 0 13.1 0zM13.1 3.3C11.3 3.3 9.8 4.8 9.8 6.5s1.5 3.3 3.3 3.3 3.3-1.5 3.3-3.3S14.9 3.3 13.1 3.3z"></path>
+                    <path d="M15.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM46.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM77.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM108.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM24.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM55.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM86.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM117.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM35.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM66.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM97.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM128.5 13.1c0 1.8-1.5 3.3-3.3 3.3-1.8 0-3.3-1.5-3.3-3.3 0-1.8 1.5-3.3 3.3-3.3 1.8 0 3.3 1.5 3.3 3.3zM138 13.1c0 7.2-5.9 13.1-13.1 13.1-7.2 0-13.1-5.9-13.1-13.1 0-7.2 5.9-13.1 13.1-13.1 7.2 0 13.1 5.9 13.1 13.1zM124.9 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM108.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM97.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM86.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM77.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM66.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM55.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3-3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM46.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM35.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3-3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM24.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM15.5 13.1c0-1.8-1.5-3.3-3.3-3.3-1.8 0-3.3 1.5-3.3 3.3 0 1.8 1.5 3.3 3.3 3.3 1.8 0 3.3-1.5 3.3-3.3zM13.1 0c7.2 0 13.1 5.9 13.1 13.1 0 7.2-5.9 13.1-13.1 13.1C5.9 26.2 0 20.3 0 13.1 0 5.9 5.9 0 13.1 0zM13.1 3.3C11.3 3.3 9.8 4.8 9.8 6.5s1.5 3.3 3.3 3.3 3.3-1.5 3.3-3.3S14.9 3.3 13.1 3.3z"></path>
                 </svg>
             </a>
         </p>
@@ -467,6 +506,7 @@
         const fpsSlider = document.getElementById('fps-slider'), fpsValue = document.getElementById('fps-value');
         const exportCodeButton = document.getElementById('export-code-button');
         const codePreviewContainer = document.getElementById('code-preview-container');
+        const codeExportDetails = document.getElementById('code-export-details');
         const htmlCodeOutput = document.getElementById('html-code-output');
         const cssCodeOutput = document.getElementById('css-code-output');
         const htmlLineNumbers = document.getElementById('html-line-numbers');
@@ -482,6 +522,8 @@
         const deleteClipButton = document.getElementById('delete-clip-button');
         const selectAllFramesButton = document.getElementById('select-all-frames');
         const deselectAllFramesButton = document.getElementById('deselect-all-frames');
+        const changeImageButton = document.getElementById('change-image-button');
+        const projectHistoryList = document.getElementById('project-history-list');
 
         // --- App State ---
         let lines = [], frames = [], clips = [], activeClipId = null;
@@ -490,6 +532,7 @@
         let animationState = { isPlaying: false, fps: 12, currentFrameIndex: 0, lastTime: 0, animationFrameId: null };
         const SNAP_VALUE = 10;
         let historyStack = [], historyIndex = -1;
+        let isReloadingFromStorage = false;
 
         // --- History (Undo/Redo) ---
         const saveState = () => {
@@ -497,6 +540,7 @@
             historyStack.push(JSON.stringify({ lines, frames }));
             historyIndex++;
             updateHistoryButtons();
+            saveCurrentSession();
         };
 
         const updateHistoryButtons = () => {
@@ -538,8 +582,7 @@
             }
             updateHistoryButtons();
         };
-        setControlsEnabled(false);
-
+        
         undoButton.addEventListener('click', undo);
         redoButton.addEventListener('click', redo);
         document.addEventListener('keydown', (e) => {
@@ -558,7 +601,10 @@
             }
             currentFileName = file.name;
             const reader = new FileReader();
-            reader.onload = (event) => imageDisplay.src = event.target.result;
+            reader.onload = (event) => {
+                imageDisplay.src = event.target.result;
+                isReloadingFromStorage = false;
+            };
             reader.readAsDataURL(file);
             imageDimensionsP.textContent = 'Cargando...';
         };
@@ -584,9 +630,14 @@
             rulerTop.height = rulerLeft.width = 30;
             imageDimensionsP.innerHTML = `<strong>${currentFileName}:</strong> ${imgWidth}px &times; ${imgHeight}px`;
             
-            historyStack = [];
-            historyIndex = -1;
-            clearAll(true);
+            if (!isReloadingFromStorage) {
+                historyStack = [];
+                historyIndex = -1;
+                clearAll(true);
+                addToHistory();
+            } else {
+                updateAll(false);
+            }
             setControlsEnabled(true);
         };
 
@@ -869,7 +920,7 @@
             let outputObject;
             const framesData = frames.map(f => ({ name: f.name, id: f.id, rect: f.rect }));
             const meta = {
-                app: "Sprite Sheet Suite v3.7", image: currentFileName,
+                app: "Sprite Sheet Suite v3.9", image: currentFileName,
                 size: { w: canvas.width, h: canvas.height },
                 clips: clips.map(c => ({ name: c.name, frames: c.frameIds }))
             };
@@ -967,6 +1018,7 @@
             livePreviewIframe.srcdoc = iframeContent;
 
             codePreviewContainer.style.display = 'grid';
+            codeExportDetails.open = true;
         });
         
         function generateCssAnimationCode(animFrames) {
@@ -974,11 +1026,10 @@
             const frameCount = animFrames.length;
             const duration = ((1 / animationState.fps) * frameCount).toFixed(2);
 
-            // --- Lógica de Escenario Dinámico ---
             const maxWidth = Math.max(...animFrames.map(f => f.rect.w));
             const maxHeight = Math.max(...animFrames.map(f => f.rect.h));
-            const scale = 2; // El factor de escala que usamos en el CSS
-            const stagePadding = 80; // Espacio extra alrededor del sprite escalado
+            const scale = 2;
+            const stagePadding = 80;
             const stageWidth = Math.round((maxWidth * scale) + stagePadding);
             const stageHeight = Math.round((maxHeight * scale) + stagePadding);
 
@@ -1003,6 +1054,7 @@
                 const percentage = (index / frameCount) * 100;
                 return `    ${percentage.toFixed(2)}% { width: ${w}px; height: ${h}px; background-position: -${x}px -${y}px; }`;
             }).join('\n');
+            keyframesSteps += `\n    100% { width: ${firstFrame.w}px; height: ${firstFrame.h}px; background-position: -${firstFrame.x}px -${firstFrame.y}px; }`;
 
             const cssCode = `/* Estilos generales para la página de demostración */
 body {
@@ -1032,20 +1084,16 @@ body {
 
 /* El contenedor del sprite con la animación */
 .sprite-container {
-    /* Las dimensiones iniciales se basan en el primer frame */
     width: ${firstFrame.w}px;
     height: ${firstFrame.h}px;
     background-image: url('${currentFileName}');
     
-    /* Para arte pixelado, evita que el navegador lo difumine */
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 
-    /* Aumenta el tamaño del sprite para mejor visibilidad */
     transform: scale(${scale});
     transform-origin: bottom center;
 
-    /* La animación principal */
     animation: run-cycle ${duration}s steps(1, end) infinite;
 }
 
@@ -1090,6 +1138,116 @@ ${keyframesSteps}
             });
             gif.render();
         });
+
+        // --- Local Storage & History ---
+        const saveCurrentSession = () => {
+            if (!imageDisplay.src || imageDisplay.src.startsWith('http')) return;
+            const state = {
+                imageSrc: imageDisplay.src,
+                fileName: currentFileName,
+                lines,
+                clips,
+                activeClipId
+            };
+            localStorage.setItem('spriteSheetLastSession', JSON.stringify(state));
+        };
+
+        const loadLastSession = () => {
+            const savedState = localStorage.getItem('spriteSheetLastSession');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                isReloadingFromStorage = true;
+                currentFileName = state.fileName;
+                lines = state.lines;
+                clips = state.clips;
+                activeClipId = state.activeClipId;
+                imageDisplay.src = state.imageSrc;
+            }
+        };
+
+        const getHistory = () => JSON.parse(localStorage.getItem('spriteSheetHistory') || '[]');
+        const saveHistory = (history) => localStorage.setItem('spriteSheetHistory', JSON.stringify(history));
+
+        const addToHistory = async () => {
+            const id = Date.now();
+            const thumbCanvas = document.createElement('canvas');
+            const thumbCtx = thumbCanvas.getContext('2d');
+            const thumbSize = 40;
+            thumbCanvas.width = thumbSize;
+            thumbCanvas.height = thumbSize;
+            thumbCtx.drawImage(imageDisplay, 0, 0, thumbSize, thumbSize);
+            const thumbSrc = thumbCanvas.toDataURL();
+
+            const historyEntry = { id, name: currentFileName, thumb: thumbSrc };
+            let history = getHistory();
+            history = history.filter(item => item.name !== currentFileName);
+            history.unshift(historyEntry);
+            if (history.length > 5) history.pop();
+            saveHistory(history);
+
+            const fullState = { imageSrc: imageDisplay.src, fileName: currentFileName, lines, clips, activeClipId };
+            localStorage.setItem(`history_${id}`, JSON.stringify(fullState));
+            updateHistoryPanel();
+        };
+
+        const updateHistoryPanel = () => {
+            const history = getHistory();
+            projectHistoryList.innerHTML = '';
+            if (history.length === 0) {
+                projectHistoryList.innerHTML = `<li style="cursor: default; justify-content: center;">No hay proyectos guardados.</li>`;
+                return;
+            }
+            history.forEach(item => {
+                const li = document.createElement('li');
+                li.dataset.historyId = item.id;
+                li.innerHTML = `
+                    <img src="${item.thumb}" class="history-thumb" alt="thumbnail">
+                    <span class="history-name">${item.name}</span>
+                    <button class="delete-history-btn" title="Eliminar del historial">✖</button>
+                `;
+                projectHistoryList.appendChild(li);
+            });
+        };
+
+        projectHistoryList.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (!li) return;
+            const id = li.dataset.historyId;
+
+            if (e.target.classList.contains('delete-history-btn')) {
+                e.stopPropagation();
+                let history = getHistory();
+                history = history.filter(item => item.id != id);
+                saveHistory(history);
+                localStorage.removeItem(`history_${id}`);
+                updateHistoryPanel();
+                showToast('Proyecto eliminado del historial.', 'warning');
+            } else {
+                const savedState = localStorage.getItem(`history_${id}`);
+                if (savedState) {
+                    const state = JSON.parse(savedState);
+                    isReloadingFromStorage = true;
+                    currentFileName = state.fileName;
+                    lines = state.lines;
+                    clips = state.clips;
+                    activeClipId = state.activeClipId;
+                    imageDisplay.src = state.imageSrc;
+                }
+            }
+        });
+
+        changeImageButton.addEventListener('click', () => {
+            appContainer.style.visibility = 'hidden';
+            document.body.classList.remove('app-loaded');
+            welcomeScreen.style.display = 'flex';
+            setTimeout(() => welcomeScreen.style.opacity = '1', 10);
+            imageLoader.value = '';
+        });
+
+        // Initial Load
+        loadLastSession();
+        updateHistoryPanel();
+        setControlsEnabled(false);
     });
     </script>
 </body>
