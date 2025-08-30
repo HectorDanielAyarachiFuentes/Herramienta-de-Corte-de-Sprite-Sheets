@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprite Sheet Suite v3.6 "Phoenix"</title>
+    <title>Sprite Sheet Suite v3.7 "Phoenix"</title>
     <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -168,7 +168,7 @@
             text-align: right;
             background-color: var(--bg-panel);
             user-select: none;
-            overflow-y: hidden; /* Hide scrollbar */
+            overflow-y: hidden;
         }
         .line-numbers span { display: block; }
         .code-editor pre {
@@ -182,7 +182,7 @@
             line-height: 1.5;
         }
         .line-numbers { line-height: 1.5; }
-        .code-editor pre::-webkit-scrollbar, .line-numbers::-webkit-scrollbar { display: none; } /* Hide internal scrollbars */
+        .code-editor pre::-webkit-scrollbar, .line-numbers::-webkit-scrollbar { display: none; }
         .code-editor-body::-webkit-scrollbar { width: 8px; }
         .code-editor-body::-webkit-scrollbar-track { background: var(--bg-panel); }
         .code-editor-body::-webkit-scrollbar-thumb { background-color: var(--border-color); border-radius: 4px; }
@@ -196,7 +196,7 @@
             height: 100%;
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            background-color: #fff;
+            background-color: #2c3e50;
         }
         
         /* --- Syntax Highlighting --- */
@@ -261,7 +261,7 @@
 
     <div id="welcome-screen">
         <div id="drop-zone">
-            <h2>Sprite Sheet Suite v3.6</h2>
+            <h2>Sprite Sheet Suite v3.7</h2>
             <p>Arrastra y suelta tu imagen aquí</p>
             <p>o</p>
             <label for="image-loader" id="image-loader-label">Selecciona un archivo</label>
@@ -272,7 +272,7 @@
     <div class="app-container" style="visibility: hidden;">
         <div class="main-panel">
             <div class="panel">
-                <h1>Sprite Sheet Suite <span class="version">v3.6 Phoenix</span></h1>
+                <h1>Sprite Sheet Suite <span class="version">v3.7 Phoenix</span></h1>
                 <p id="image-dimensions">Carga una imagen para empezar.</p>
             </div>
             <div class="panel">
@@ -359,9 +359,6 @@
                     <summary>Exportar a Código</summary>
                     <div style="padding-top: 10px;">
                         <button id="export-code-button" disabled>Generar HTML/CSS</button>
-                        <!-- ================================================== -->
-                        <!-- === NUEVA ESTRUCTURA PARA EL EDITOR DE CÓDIGO ==== -->
-                        <!-- ================================================== -->
                         <div id="code-preview-container">
                             <div class="code-editors">
                                 <div class="code-editor">
@@ -827,16 +824,14 @@
             }
             if (lang === 'html') {
                 return str
-                    .replace(/(&lt;\/?)([^&gt;]+)(&gt;)/g, 
-                        `$1<span class="token-tag">$2</span>$3`)
-                    .replace(/([a-z-]+)=(&quot;.*?&quot;)/g, 
-                        `<span class="token-attr-name">$1</span>=<span class="token-attr-value">$2</span>`);
+                    .replace(/(&lt;\/?)([^&gt;\s]+)/g, `$1<span class="token-tag">$2</span>`)
+                    .replace(/([a-z-]+)=(&quot;.*?&quot;)/g, `<span class="token-attr-name">$1</span>=<span class="token-attr-value">$2</span>`);
             }
             if (lang === 'css') {
                 return str
                     .replace(/\/\*[\s\S]*?\*\//g, '<span class="token-comment">$&</span>')
                     .replace(/([a-zA-Z-]+)(?=:)/g, '<span class="token-property">$&</span>')
-                    .replace(/(body|@keyframes|\.sprite-container)/g, '<span class="token-selector">$&</span>');
+                    .replace(/(body|h1|@keyframes|\.stage|\.sprite-container|\.ground)/g, '<span class="token-selector">$&</span>');
             }
             return str;
         };
@@ -846,7 +841,7 @@
             let outputObject;
             const framesData = frames.map(f => ({ name: f.name, id: f.id, rect: f.rect }));
             const meta = {
-                app: "Sprite Sheet Suite v3.5", image: currentFileName,
+                app: "Sprite Sheet Suite v3.6", image: currentFileName,
                 size: { w: canvas.width, h: canvas.height },
                 clips: clips.map(c => ({ name: c.name, frames: c.frameIds }))
             };
@@ -912,42 +907,31 @@
             
             const { htmlCode, cssCode } = generateCssAnimationCode(animFrames);
             
-            // Populate code blocks
             htmlCodeOutput.innerHTML = highlightSyntax(htmlCode, 'html');
             cssCodeOutput.innerHTML = highlightSyntax(cssCode, 'css');
             
-            // Generate line numbers
             const generateLines = (count) => Array.from({length: count}, (_, i) => `<span>${i + 1}</span>`).join('');
             htmlLineNumbers.innerHTML = generateLines(htmlCode.split('\n').length);
             cssLineNumbers.innerHTML = generateLines(cssCode.split('\n').length);
 
-            // Sync scrolling
             const syncScroll = (el1, el2) => {
                 el1.addEventListener('scroll', () => el2.scrollTop = el1.scrollTop);
             };
             syncScroll(htmlCodeOutput.parentElement, htmlLineNumbers);
             syncScroll(cssCodeOutput.parentElement, cssLineNumbers);
 
-            // Populate live preview iframe
             const iframeContent = `
                 <!DOCTYPE html>
-                <html>
-                <head>
-                    <style>
-                        body { margin: 0; display: grid; place-content: center; height: 100vh; background-color: #fff; }
-                        ${cssCode}
-                    </style>
-                </head>
-                <body>
-                    ${htmlCode.match(/<body>([\s\S]*)<\/body>/)[1]}
-                </body>
-                </html>
-            `;
+                <html><head><style>${cssCode}</style></head>
+                <body>${htmlCode.match(/<body>([\s\S]*)<\/body>/)[1]}</body></html>`;
             livePreviewIframe.srcdoc = iframeContent;
 
             codePreviewContainer.style.display = 'grid';
         });
         
+        // ==================================================
+        // === FUNCIÓN DE GENERACIÓN DE CÓDIGO CORREGIDA ====
+        // ==================================================
         function generateCssAnimationCode(animFrames) {
             const firstFrame = animFrames[0].rect;
             const frameCount = animFrames.length;
@@ -961,7 +945,11 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="sprite-container"></div>
+    <h1>Mi Animación</h1>
+    <div class="stage">
+        <div class="sprite-container"></div>
+        <div class="ground"></div>
+    </div>
 </body>
 </html>`;
 
@@ -970,23 +958,60 @@
                 const percentage = (index / frameCount) * 100;
                 return `    ${percentage.toFixed(2)}% { background-position: -${x}px -${y}px; }`;
             }).join('\n');
-            
-            const lastFrame = animFrames[frameCount - 1].rect;
-            keyframesSteps += `\n    100% { background-position: -${lastFrame.x}px -${lastFrame.y}px; }`;
 
-            const cssCode = `/* Contenedor principal del sprite */
+            const cssCode = `/* Estilos generales para la página de demostración */
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #2c3e50;
+    font-family: sans-serif;
+    color: #ecf0f1;
+    margin: 0;
+}
+
+/* El "escenario" donde ocurre la animación */
+.stage {
+    width: 350px;
+    height: 300px;
+    background-color: #1a252f;
+    border: 2px solid #55687a;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    position: relative;
+    overflow: hidden;
+}
+
+/* El contenedor del sprite con la animación */
 .sprite-container {
     width: ${firstFrame.w}px;
     height: ${firstFrame.h}px;
     background-image: url('${currentFileName}');
+    
+    /* Para arte pixelado, evita que el navegador lo difumine */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
 
-    /* --- Animación ---
-     * nombre: run-cycle
-     * duración: ${duration}s
-     * función de tiempo: steps(1, end) -> avanza en saltos discretos
-     * repetición: infinite -> se repite indefinidamente
-    */
+    /* Aumenta el tamaño del sprite para mejor visibilidad */
+    transform: scale(2);
+    transform-origin: bottom center;
+
+    /* La animación principal */
     animation: run-cycle ${duration}s steps(1, end) infinite;
+}
+
+/* Un suelo simple para dar contexto */
+.ground {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    background-color: #8c98a5;
+    border-top: 3px solid #ffffff;
 }
 
 /* Definición de los pasos de la animación */
