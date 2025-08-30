@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sprite Sheet Suite v3.1 "Phoenix"</title>
+    <title>Sprite Sheet Suite v3.2 "Phoenix"</title>
     <!-- Librerías Externas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -146,7 +146,7 @@
 
     <div id="welcome-screen">
         <div id="drop-zone">
-            <h2>Sprite Sheet Suite v3.1</h2>
+            <h2>Sprite Sheet Suite v3.2</h2>
             <p>Arrastra y suelta tu imagen aquí</p>
             <p>o</p>
             <label for="image-loader" id="image-loader-label">Selecciona un archivo</label>
@@ -157,7 +157,7 @@
     <div class="app-container" style="visibility: hidden;">
         <div class="main-panel">
             <div class="panel">
-                <h1>Sprite Sheet Suite <span class="version">v3.1 Phoenix</span></h1>
+                <h1>Sprite Sheet Suite <span class="version">v3.2 Phoenix</span></h1>
                 <p id="image-dimensions">Carga una imagen para empezar.</p>
             </div>
             <div class="panel">
@@ -321,20 +321,9 @@
         const SNAP_VALUE = 10;
         let historyStack = [], historyIndex = -1;
 
-        // --- Initialization ---
-        const setControlsEnabled = (enabled) => {
-            allControls.forEach(el => {
-                if (el.id !== 'image-loader' && el.parentElement.id !== 'drop-zone') {
-                    el.disabled = !enabled;
-                }
-            });
-            if (!enabled) {
-                codeOutputArea.style.display = 'none';
-            }
-            updateHistoryButtons();
-        };
-        setControlsEnabled(false);
-
+        // ==================================================
+        // === BLOQUE DE CÓDIGO MOVIDO PARA CORREGIR EL ERROR ===
+        // ==================================================
         // --- History (Undo/Redo) ---
         const saveState = () => {
             historyStack = historyStack.slice(0, historyIndex + 1);
@@ -370,6 +359,20 @@
             updateHistoryButtons();
         };
 
+        // --- Initialization ---
+        const setControlsEnabled = (enabled) => {
+            allControls.forEach(el => {
+                if (el.id !== 'image-loader' && el.parentElement.id !== 'drop-zone') {
+                    el.disabled = !enabled;
+                }
+            });
+            if (!enabled) {
+                codeOutputArea.style.display = 'none';
+            }
+            updateHistoryButtons(); // Ahora esta llamada es segura
+        };
+        setControlsEnabled(false);
+
         undoButton.addEventListener('click', undo);
         redoButton.addEventListener('click', redo);
         document.addEventListener('keydown', (e) => {
@@ -378,9 +381,6 @@
         });
 
         // --- Image Loading & Drag-Drop ---
-        // ==================================================
-        // === CORRECCIÓN DRAG & DROP AÑADIDA AQUÍ ==========
-        // ==================================================
         window.addEventListener('dragover', e => e.preventDefault());
         window.addEventListener('drop', e => e.preventDefault());
 
@@ -454,7 +454,6 @@
                     }
                 }
             }
-            // Auto-create default clip if none exist
             if (clips.length === 0 && frames.length > 0) {
                 createNewClip("Default", frames.map(f => f.id));
             }
@@ -681,7 +680,7 @@
             let outputObject;
             const framesData = frames.map(f => ({ name: f.name, id: f.id, rect: f.rect }));
             const meta = {
-                app: "Sprite Sheet Suite v3.1", image: currentFileName,
+                app: "Sprite Sheet Suite v3.2", image: currentFileName,
                 size: { w: canvas.width, h: canvas.height },
                 clips: clips.map(c => ({ name: c.name, frames: c.frameIds }))
             };
